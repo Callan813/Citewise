@@ -6,6 +6,9 @@ import {
   NotFoundException,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../config/configuration.js';
+import { UsageService } from '../usage/usage.service.js';
 import { IngestionQueueService } from '../ingestion/ingestion-queue.service.js';
 import { StorageService } from '../storage/storage.service.js';
 import { DocumentsRepository } from './documents.repository.js';
@@ -24,6 +27,8 @@ export class DocumentsService {
     private readonly extractor: TextExtractorService,
     private readonly storage: StorageService,
     private readonly queue: IngestionQueueService,
+    private readonly usage: UsageService,
+    private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
   async upload(
@@ -36,6 +41,14 @@ export class DocumentsService {
         'Only PDF and UTF-8 text files are supported',
       );
     }
+
+    const { maxDocuments } = this.config.get('limits', { infer: true });
+    if ((await this.documents.countOwned(userId)) >= maxDocuments) {
+      throw new ForbiddenException(
+        `You can keep up to ${maxDocuments} documents. Delete one to add another.`,
+      );
+    }
+    await this.usage.consumeUpload(userId);
 
     // File first, then row, then job. A failure at any step leaves nothing that
     // a later step depends on, and the catch below removes what was created.

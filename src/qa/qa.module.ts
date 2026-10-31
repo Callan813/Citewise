@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
 import { SearchModule } from '../search/search.module.js';
+import { AnswerCacheService } from './answer-cache.service.js';
 import { ChatProvider } from './chat.provider.js';
 import { FakeChatProvider } from './fake-chat.provider.js';
 import { GeminiChatProvider } from './gemini-chat.provider.js';
@@ -13,6 +14,7 @@ import { QaService } from './qa.service.js';
   controllers: [QaController],
   providers: [
     QaService,
+    AnswerCacheService,
     {
       provide: ChatProvider,
       inject: [ConfigService],

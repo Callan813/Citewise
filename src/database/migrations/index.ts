@@ -3,6 +3,7 @@ import { CreateDocuments1793463076902 } from './1793463076902-CreateDocuments.js
 import { AddDocumentIngestion1793472337425 } from './1793472337425-AddDocumentIngestion.js';
 import { AddGoogleSignIn1793476731854 } from './1793476731854-AddGoogleSignIn.js';
 import { CreateChunks1793478925098 } from './1793478925098-CreateChunks.js';
+import { AddUsageDaily1793481139093 } from './1793481139093-AddUsageDaily.js';
 
 // Every migration class, in order. Add new ones here after generating them.
 export const migrations = [
@@ -11,4 +12,5 @@ export const migrations = [
   AddDocumentIngestion1793472337425,
   AddGoogleSignIn1793476731854,
   CreateChunks1793478925098,
+  AddUsageDaily1793481139093,
 ];

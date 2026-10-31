@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, ApiError, type DocumentItem, type User } from './api'
+import { api, ApiError, type DocumentItem, type Usage, type User } from './api'
 import { AskBox } from './AskBox'
 import { Brand } from './Brand'
 import { DocumentViewer } from './DocumentViewer'
@@ -40,6 +40,18 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
   const [viewing, setViewing] = useState<Viewing | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [tab, setTab] = useState<'ask' | 'find'>('ask')
+  const [usage, setUsage] = useState<Usage | null>(null)
+
+  const loadUsage = useCallback(() => {
+    api
+      .usage()
+      .then(setUsage)
+      .catch(() => setUsage(null)) // only informational, so failing quietly is fine
+  }, [])
+
+  useEffect(() => {
+    loadUsage()
+  }, [loadUsage])
 
   const load = useCallback(async () => {
     try {
@@ -149,7 +161,7 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
 
           {/* Both stay mounted, so switching tabs keeps what's on screen. */}
           <div hidden={tab !== 'ask'}>
-            <AskBox onOpenSource={openPassage} />
+            <AskBox onOpenSource={openPassage} onAnswered={loadUsage} />
           </div>
           <div hidden={tab !== 'find'}>
             <SearchBox onOpenResult={openPassage} />
@@ -172,7 +184,12 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
             )}
           </div>
 
-          <UploadBox onUploaded={() => void load()} />
+          <UploadBox
+            onUploaded={() => {
+              void load()
+              loadUsage()
+            }}
+          />
 
           {error && (
             <p role="alert" className="mt-4 text-sm text-danger">
@@ -265,6 +282,13 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
                 Older
               </button>
             </nav>
+          )}
+
+          {usage && (
+            <p className="mt-5 text-sm text-muted">
+              Today: {usage.questionsUsed} of {usage.questionsLimit} questions,{' '}
+              {usage.uploadsUsed} of {usage.uploadsLimit} uploads.
+            </p>
           )}
         </aside>
       </div>

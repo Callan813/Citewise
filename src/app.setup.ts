@@ -1,9 +1,19 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from './config/configuration.js';
 import helmet from 'helmet';
 
 // Global app behaviour shared by main.ts and the e2e tests, so tests exercise
 // exactly the same pipeline as production.
 export function setupApp(app: INestApplication): void {
+  // Without this, every visitor behind a proxy looks like the proxy's address.
+  const config = app.get(ConfigService<AppConfig, true>);
+  (
+    app.getHttpAdapter().getInstance() as {
+      set: (name: string, value: number) => void;
+    }
+  ).set('trust proxy', config.get('trustProxyHops', { infer: true }));
+
   // Safe default response headers, such as blocking MIME type sniffing.
   app.use(helmet());
 

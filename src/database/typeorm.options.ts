@@ -3,13 +3,14 @@ import type { AppConfig } from '../config/configuration.js';
 import { Chunk } from '../documents/entities/chunk.entity.js';
 import { DocumentPage } from '../documents/entities/document-page.entity.js';
 import { Document } from '../documents/entities/document.entity.js';
+import { UsageDaily } from '../usage/usage-daily.entity.js';
 import { User } from '../users/user.entity.js';
 import { migrations } from './migrations/index.js';
 
 // Entities and migrations are listed explicitly instead of found by a file glob.
 // Globs break depending on whether code runs from src/ (tests) or dist/ (prod);
 // an explicit list behaves the same everywhere. The cost: register new ones here.
-export const entities = [User, Document, DocumentPage, Chunk];
+export const entities = [User, Document, DocumentPage, Chunk, UsageDaily];
 
 export function buildDataSourceOptions(
   db: AppConfig['database'],

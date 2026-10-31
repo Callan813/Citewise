@@ -16,6 +16,28 @@ export const configuration = () => ({
     port: Number(process.env.REDIS_PORT ?? 6379),
     db: Number(process.env.REDIS_DB ?? 0),
   },
+  cacheRedis: {
+    host: process.env.CACHE_REDIS_HOST ?? process.env.REDIS_HOST!,
+    port: Number(process.env.CACHE_REDIS_PORT ?? 6381),
+    db: Number(process.env.CACHE_REDIS_DB ?? 0),
+  },
+  cache: {
+    ttlSeconds: Number(process.env.CACHE_TTL_SECONDS ?? 3600),
+    semanticThreshold: Number(process.env.CACHE_SEMANTIC_THRESHOLD ?? 0.93),
+  },
+  limits: {
+    dailyQuestions: Number(process.env.DAILY_QUESTION_LIMIT ?? 30),
+    dailyQuestionsGlobal: Number(
+      process.env.DAILY_QUESTION_LIMIT_GLOBAL ?? 300,
+    ),
+    dailyUploads: Number(process.env.DAILY_UPLOAD_LIMIT ?? 20),
+    maxDocuments: Number(process.env.MAX_DOCUMENTS_PER_USER ?? 50),
+    multiplier: Number(process.env.RATE_LIMIT_MULTIPLIER ?? 1),
+  },
+  trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 0),
+  metrics: {
+    token: process.env.METRICS_TOKEN ?? '',
+  },
   storageDir: process.env.STORAGE_DIR ?? 'uploads',
   jwt: {
     secret: process.env.JWT_SECRET!,

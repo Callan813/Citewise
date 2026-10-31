@@ -3,13 +3,15 @@ import { api, ApiError, type AskSource } from './api'
 
 interface Props {
   onOpenSource: (source: AskSource) => void
+  onAnswered: () => void
 }
 
-export function AskBox({ onOpenSource }: Props) {
+export function AskBox({ onOpenSource, onAnswered }: Props) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [sources, setSources] = useState<AskSource[]>([])
   const [keywordOnly, setKeywordOnly] = useState(false)
+  const [cached, setCached] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const stopper = useRef<AbortController | null>(null)
@@ -24,6 +26,7 @@ export function AskBox({ onOpenSource }: Props) {
     setAnswer('')
     setSources([])
     setKeywordOnly(false)
+    setCached(false)
     setError('')
     try {
       const result = await api.askStream(
@@ -33,12 +36,14 @@ export function AskBox({ onOpenSource }: Props) {
       )
       setSources(result.sources)
       setKeywordOnly(result.mode === 'keyword')
+      setCached(result.cached)
     } catch (err) {
       if (!controller.signal.aborted) {
         setError(err instanceof ApiError ? err.message : 'Something went wrong')
       }
     } finally {
       setBusy(false)
+      onAnswered()
     }
   }
 
@@ -166,6 +171,7 @@ export function AskBox({ onOpenSource }: Props) {
           )}
           {!busy && sources.length > 0 && (
             <p className="mt-4 text-sm text-muted">
+              {cached && 'Answered from a recent identical question. '}
               AI answers can be wrong. Check the sources.
             </p>
           )}

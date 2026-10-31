@@ -29,4 +29,7 @@ export class AskResponseDto {
     description: 'keyword means embeddings were unavailable for this question',
   })
   mode: 'hybrid' | 'keyword';
+
+  @ApiProperty({ description: 'Whether this came from the answer cache' })
+  cached: boolean;
 }

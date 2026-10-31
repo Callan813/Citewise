@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import {
@@ -109,9 +110,17 @@ describe('Ask (e2e)', () => {
     await upload(priya, 'Secret salary figure zebraquartz.', 'offer.txt');
   });
 
-  beforeEach(() => {
+  // Each test starts without cached answers, so the scripted model really runs.
+  beforeEach(async () => {
     chat.requests = [];
     chat.script = null;
+    const cache = new Redis({
+      host: process.env.CACHE_REDIS_HOST,
+      port: Number(process.env.CACHE_REDIS_PORT ?? 6381),
+      db: Number(process.env.CACHE_REDIS_DB),
+    });
+    await cache.flushdb();
+    cache.disconnect();
   });
 
   afterAll(async () => {

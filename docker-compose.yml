@@ -35,6 +35,20 @@ services:
       timeout: 3s
       retries: 10
 
+  # The answer cache and rate limits. Unlike the queue above, this one may drop
+  # old keys when full, because everything in it can be worked out again.
+  redis-cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    ports:
+      - "127.0.0.1:${CACHE_REDIS_HOST_PORT:-6381}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   pgdata:
   redisdata:

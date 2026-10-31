@@ -121,6 +121,10 @@ export class DocumentsRepository {
       );
   }
 
+  countOwned(userId: string): Promise<number> {
+    return this.db.getRepository(Document).countBy({ userId });
+  }
+
   // The access rule lives in one query builder, so reads can't diverge.
   private visibleTo(userId: string) {
     return this.db

@@ -36,9 +36,7 @@ const VECTOR_HITS = `
 `;
 const NO_VECTOR_HITS = `SELECT NULL::uuid AS id, NULL::bigint AS rank WHERE false`;
 
-const buildQuery = (vectorHits: string) => `
-  WITH vector_hits AS (${vectorHits}),
-  keyword_hits AS (
+const KEYWORD_HITS = `
     SELECT id, ROW_NUMBER() OVER (ORDER BY text_rank DESC) AS rank FROM (
       SELECT c.id, ts_rank_cd(to_tsvector('english', c.content), query) AS text_rank
       FROM chunks c
@@ -48,7 +46,11 @@ const buildQuery = (vectorHits: string) => `
       ORDER BY text_rank DESC
       LIMIT ${CANDIDATES}
     ) matched
-  ),
+`;
+
+const buildQuery = (vectorHits: string, keywordHits = KEYWORD_HITS) => `
+  WITH vector_hits AS (${vectorHits}),
+  keyword_hits AS (${keywordHits}),
   fused AS (
     SELECT
       COALESCE(v.id, k.id) AS id,
@@ -70,13 +72,26 @@ const buildQuery = (vectorHits: string) => `
 export class SearchRepository {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
-  // Pass no vector to search by keywords alone.
+  // A fingerprint of the documents this user can currently see. It changes
+  // whenever a document is added, finished or removed.
+  async corpusFingerprint(userId: string): Promise<string> {
+    const [row] = (await this.db.query(
+      `SELECT md5(COALESCE(string_agg(d.id::text, ',' ORDER BY d.id), '')) AS hash
+       FROM documents d WHERE ${SEARCHABLE}`,
+      [userId],
+    )) as { hash: string }[];
+    return row.hash;
+  }
+
+  // Pass no vector to search by keywords alone. keywords: false is only used by
+  // the evaluation, to measure what each method contributes.
   search(
     userId: string,
     query: string,
     vector: number[] | null,
     limit: number,
     maxDistance: number,
+    keywords = true,
   ): Promise<SearchRow[]> {
     if (!vector) {
       return this.db.query(buildQuery(NO_VECTOR_HITS), [userId, query, limit]);
@@ -86,7 +101,10 @@ export class SearchRepository {
       // so a user with few documents could get too few results. This keeps it
       // scanning until the limit is met. SET LOCAL ends with the transaction.
       await tx.query(`SET LOCAL hnsw.iterative_scan = relaxed_order`);
-      return tx.query(buildQuery(VECTOR_HITS), [
+      const keywordHits = keywords
+        ? KEYWORD_HITS
+        : `SELECT NULL::uuid AS id, NULL::bigint AS rank WHERE $2::text IS NULL`;
+      return tx.query(buildQuery(VECTOR_HITS, keywordHits), [
         userId,
         query,
         limit,

@@ -4,6 +4,7 @@ import {
   type AuthUser,
   CurrentUser,
 } from '../common/decorators/current-user.decorator.js';
+import { RateLimit } from '../common/guards/rate-limit.guard.js';
 import { SearchResponseDto } from './dto/search-response.dto.js';
 import { SearchDto } from './dto/search.dto.js';
 import { SearchService } from './search.service.js';
@@ -17,6 +18,7 @@ export class SearchController {
   // POST so the search text stays out of URLs, which end up in browser history
   // and proxy logs.
   @Post()
+  @RateLimit('search', 30, 60)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SearchResponseDto })
   run(

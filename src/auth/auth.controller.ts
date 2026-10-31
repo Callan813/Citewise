@@ -13,9 +13,11 @@ import {
   ApiOkResponse,
   ApiServiceUnavailableResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator.js';
+import { RateLimit } from '../common/guards/rate-limit.guard.js';
 import { AuthService } from './auth.service.js';
 import { AuthConfigResponseDto } from './dto/auth-config-response.dto.js';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
@@ -30,6 +32,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('register')
+  @RateLimit('register', 5, 3600)
   @ApiCreatedResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid email or password too short' })
   @ApiConflictResponse({ description: 'Email already registered' })
@@ -45,6 +48,7 @@ export class AuthController {
   }
 
   @Post('google')
+  @RateLimit('google', 20, 60)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'The Google token is not valid' })
@@ -60,9 +64,11 @@ export class AuthController {
 
   // POST defaults to 201 Created, but logging in doesn't create anything.
   @Post('login')
+  @RateLimit('login', 10, 60)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
+  @ApiTooManyRequestsResponse({ description: 'Too many attempts' })
   login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.auth.login(dto);
   }

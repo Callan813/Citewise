@@ -1,12 +1,16 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
+import { MetricsService } from '../../metrics/metrics.service.js';
 
 // Logs one line per request once the response has been sent, with the status
 // code and how long it took. This is the raw material for latency metrics later.
 @Injectable()
 export class RequestLoggingMiddleware implements NestMiddleware {
-  constructor(private readonly logger: PinoLogger) {
+  constructor(
+    private readonly logger: PinoLogger,
+    private readonly metrics: MetricsService,
+  ) {
     this.logger.setContext('HTTP');
   }
 
@@ -23,6 +27,12 @@ export class RequestLoggingMiddleware implements NestMiddleware {
         statusCode: res.statusCode,
         durationMs: Math.round(durationMs * 100) / 100,
       };
+      // The pattern, like /documents/:id. See the note in MetricsService.
+      const route = (req.route as { path?: string } | undefined)?.path;
+      const labels = { method: req.method, route: route ?? 'unmatched' };
+      this.metrics.httpRequests.inc({ ...labels, status: res.statusCode });
+      this.metrics.httpDuration.observe(labels, durationMs / 1000);
+
       const msg = `${req.method} ${path} ${res.statusCode}`;
 
       if (res.statusCode >= 500) this.logger.error(entry, msg);

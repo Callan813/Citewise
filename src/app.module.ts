@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module.js';
+import { CacheModule } from './cache/cache.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { LoggerModule } from './common/logger/logger.module.js';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware.js';
@@ -10,8 +11,10 @@ import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { HealthModule } from './health/health.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
 import { QaModule } from './qa/qa.module.js';
 import { SearchModule } from './search/search.module.js';
+import { UsageModule } from './usage/usage.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -24,6 +27,9 @@ import { UsersModule } from './users/users.module.js';
     }),
     LoggerModule,
     DatabaseModule,
+    CacheModule,
+    MetricsModule,
+    UsageModule,
     UsersModule,
     AuthModule,
     DocumentsModule,

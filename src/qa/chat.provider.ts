@@ -2,6 +2,7 @@ export interface ChatRequest {
   system: string;
   prompt: string;
   signal?: AbortSignal;
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
 }
 
 // Yields the answer in pieces as it's written. Behind an abstract class so tests

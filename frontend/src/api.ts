@@ -53,6 +53,14 @@ export interface AskSource {
 export interface AskResult {
   sources: AskSource[]
   mode: 'hybrid' | 'keyword'
+  cached: boolean
+}
+
+export interface Usage {
+  questionsUsed: number
+  questionsLimit: number
+  uploadsUsed: number
+  uploadsLimit: number
 }
 
 export class ApiError extends Error {
@@ -179,6 +187,7 @@ export const api = {
   authConfig: () => request<{ googleClientId: string | null }>('/auth/config'),
 
   askStream,
+  usage: () => request<Usage>('/users/me/usage'),
   search: (query: string) =>
     request<SearchResponse>('/search', {
       method: 'POST',

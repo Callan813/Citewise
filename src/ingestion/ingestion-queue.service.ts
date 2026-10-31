@@ -66,6 +66,10 @@ export class IngestionQueueService implements OnApplicationShutdown {
     await this.queue.getWaitingCount();
   }
 
+  jobCounts(): Promise<Record<string, number>> {
+    return this.queue.getJobCounts('waiting', 'active', 'delayed', 'failed');
+  }
+
   waitUntilReady(): Promise<void> {
     return this.queue.waitUntilReady();
   }

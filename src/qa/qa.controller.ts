@@ -20,14 +20,10 @@ import {
   type AuthUser,
   CurrentUser,
 } from '../common/decorators/current-user.decorator.js';
+import { RateLimit } from '../common/guards/rate-limit.guard.js';
 import { AskResponseDto } from './dto/ask-response.dto.js';
 import { AskDto } from './dto/ask.dto.js';
-import {
-  citedSources,
-  FAILED_MESSAGE,
-  QaService,
-  userMessageFor,
-} from './qa.service.js';
+import { FAILED_MESSAGE, QaService, userMessageFor } from './qa.service.js';
 
 @ApiTags('Questions')
 @ApiBearerAuth()
@@ -41,6 +37,7 @@ export class QaController {
   }
 
   @Post()
+  @RateLimit('ask', 10, 60)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AskResponseDto })
   @ApiServiceUnavailableResponse({
@@ -54,11 +51,12 @@ export class QaController {
   }
 
   @Post('stream')
+  @RateLimit('ask', 10, 60)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Ask, and receive the answer as server-sent events',
     description:
-      'Sends "delta" events with { text } as the answer is written, then one "done" event with { sources, mode }, or an "error" event with { message }.',
+      'Sends "delta" events with { text } as the answer is written, then one "done" event with { sources, mode, cached }, or an "error" event with { message }.',
   })
   @ApiProduces('text/event-stream')
   async stream(
@@ -68,7 +66,7 @@ export class QaController {
   ): Promise<void> {
     // Done before any headers go out, so a failure here is still a normal error
     // response. Once streaming starts, the status code can't change.
-    const { mode, passages } = await this.qa.retrieve(user.id, dto.question);
+    const prepared = await this.qa.prepare(user.id, dto.question);
 
     res.status(HttpStatus.OK).set({
       'Content-Type': 'text/event-stream',
@@ -88,16 +86,16 @@ export class QaController {
 
     let answer = '';
     try {
-      for await (const text of this.qa.generate(
-        dto.question,
-        passages,
-        abort.signal,
-      )) {
+      for await (const text of this.qa.generate(prepared, abort.signal)) {
         answer += text;
         send('delta', { text });
       }
       if (answer.trim()) {
-        send('done', { sources: citedSources(answer, passages), mode });
+        const { sources, mode, cached } = await this.qa.finish(
+          prepared,
+          answer,
+        );
+        send('done', { sources, mode, cached });
       } else {
         send('error', { message: FAILED_MESSAGE });
       }

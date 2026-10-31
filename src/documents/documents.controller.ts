@@ -32,6 +32,7 @@ import {
   type AuthUser,
   CurrentUser,
 } from '../common/decorators/current-user.decorator.js';
+import { RateLimit } from '../common/guards/rate-limit.guard.js';
 import { DocumentsService } from './documents.service.js';
 import {
   DocumentListResponseDto,
@@ -53,6 +54,7 @@ export class DocumentsController {
   // The limit makes multer stop reading oversized uploads, and defParamCharset
   // keeps non-English filenames from being garbled.
   @Post('upload')
+  @RateLimit('upload', 10, 60)
   @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FileInterceptor('file', {

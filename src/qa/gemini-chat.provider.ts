@@ -32,9 +32,18 @@ export class GeminiChatProvider extends ChatProvider {
           abortSignal: request.signal,
         },
       });
+      let usage: { inputTokens: number; outputTokens: number } | null = null;
       for await (const chunk of response) {
         if (chunk.text) yield chunk.text;
+        // Each chunk carries running totals, so the last one is the full count.
+        if (chunk.usageMetadata) {
+          usage = {
+            inputTokens: chunk.usageMetadata.promptTokenCount ?? 0,
+            outputTokens: chunk.usageMetadata.candidatesTokenCount ?? 0,
+          };
+        }
       }
+      if (usage) request.onUsage?.(usage);
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         throw new ChatRateLimitError();
