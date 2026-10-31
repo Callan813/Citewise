@@ -1,0 +1,36 @@
+services:
+  postgres:
+    # Official Postgres with the pgvector extension pre-built.
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-docintel}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-docintel}
+      POSTGRES_DB: ${DATABASE_NAME:-docintel}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Scripts in this folder run once, the first time the volume is created.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Cap memory and evict least-recently-used keys - right for a pure cache.
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
