@@ -52,25 +52,26 @@ export function UploadBox({ onUploaded }: Props) {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors ${
-          dragging ? 'border-accent bg-white' : 'border-line'
+        className={`rounded-xl border border-dashed px-4 py-5 text-center transition-colors ${
+          dragging ? 'border-accent bg-surface' : 'border-muted/50'
         }`}
       >
         {busy ? (
-          <p role="status" className="break-words text-muted">
+          <p role="status" className="text-sm break-words text-muted">
             {progress}
           </p>
         ) : (
           <>
-            <p className="font-medium">Drop PDF or text files here</p>
-            <p className="mt-1 mb-4 text-sm text-muted">Up to 10 MB each</p>
             <button
               type="button"
               onClick={() => input.current?.click()}
-              className="rounded-md bg-accent px-4 py-2 font-medium text-white hover:bg-accent-dark"
+              className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold transition-colors hover:border-accent hover:text-accent"
             >
-              Choose files
+              Add documents
             </button>
+            <p className="mt-2 text-sm text-muted">
+              or drop PDF and text files here, up to 10 MB each
+            </p>
           </>
         )}
         <input
@@ -87,6 +88,9 @@ export function UploadBox({ onUploaded }: Props) {
           }}
         />
       </div>
+      <p className="mt-2 text-xs text-muted">
+        Avoid anything sensitive: text is processed by Google's Gemini API.
+      </p>
 
       {errors.length > 0 && (
         <ul role="alert" className="mt-3 space-y-1 text-sm text-danger">

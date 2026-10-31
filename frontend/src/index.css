@@ -1,22 +1,134 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-paper: #f7f5f0;
-  --color-ink: #1f2421;
-  --color-muted: #5f6661;
-  --color-line: #dcd8ce;
-  --color-accent: #1f5f5b;
-  --color-accent-dark: #174845;
-  --color-danger: #a4312b;
+  --font-sans: 'Instrument Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+
+  --color-paper: #f5f1e8;
+  --color-surface: #fdfbf6;
+  --color-ink: #211e19;
+  --color-muted: #665f54;
+  --color-line: #dfd8c8;
+  --color-accent: #a23b22;
+  --color-accent-dark: #842e19;
+  --color-on-accent: #ffffff;
+  --color-highlight: #f7de8a;
+  --color-danger: #a12a24;
+  --color-ok: #3c6a48;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #171511;
+    --color-surface: #211e18;
+    --color-ink: #efe9db;
+    --color-muted: #aaa292;
+    --color-line: #3a352b;
+    --color-accent: #e58a6c;
+    --color-accent-dark: #f0a48b;
+    --color-on-accent: #24120b;
+    --color-highlight: #6b5716;
+    --color-danger: #f0907d;
+    --color-ok: #8fc19d;
+  }
 }
 
 body {
   background: var(--color-paper);
   color: var(--color-ink);
-  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+mark {
+  background: var(--color-highlight);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0.05em 0.1em;
+  box-decoration-break: clone;
+}
+
+/* A citation looks like a stroke of highlighter on the page. */
+.citation {
+  display: inline-block;
+  margin: 0 0.1em;
+  padding: 0 0.3em;
+  border-radius: 3px;
+  background: var(--color-highlight);
+  font-family: var(--font-sans);
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: 0.18em;
+}
+
+button.citation {
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+button.citation:hover {
+  transform: translateY(-1px);
+}
+
+.caret::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 0.15em;
+  background: var(--color-accent);
+  vertical-align: -0.12em;
+  animation: blink 1s steps(2, start) infinite;
+}
+
+.pulse-dot {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.rise {
+  animation: rise 260ms ease-out both;
+}
+
+dialog[open] {
+  animation: rise 200ms ease-out both;
+}
+
+dialog::backdrop {
+  background: rgb(20 16 10 / 0.55);
+  backdrop-filter: blur(2px);
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::backdrop {
+    animation: none !important;
+    transition: none !important;
+  }
 }
