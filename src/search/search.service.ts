@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
+import type { AppConfig } from '../config/configuration.js';
 import { EmbeddingProvider } from '../embeddings/embedding.provider.js';
 import type { SearchResponseDto } from './dto/search-response.dto.js';
 import { SearchRepository } from './search.repository.js';
@@ -10,6 +12,7 @@ export class SearchService {
     private readonly repository: SearchRepository,
     private readonly embeddings: EmbeddingProvider,
     private readonly logger: PinoLogger,
+    private readonly config: ConfigService<AppConfig, true>,
   ) {
     this.logger.setContext(SearchService.name);
   }
@@ -28,7 +31,13 @@ export class SearchService {
       this.logger.warn({ err }, 'Falling back to keyword-only search');
     }
 
-    const rows = await this.repository.search(userId, query, vector, limit);
+    const rows = await this.repository.search(
+      userId,
+      query,
+      vector,
+      limit,
+      this.config.get('search', { infer: true }).maxDistance,
+    );
     return {
       mode: vector ? 'hybrid' : 'keyword',
       results: rows.map((row) => ({

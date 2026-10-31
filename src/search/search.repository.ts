@@ -32,6 +32,7 @@ const VECTOR_HITS = `
     ORDER BY distance
     LIMIT $5
   ) nearest
+  WHERE distance <= $6
 `;
 const NO_VECTOR_HITS = `SELECT NULL::uuid AS id, NULL::bigint AS rank WHERE false`;
 
@@ -75,6 +76,7 @@ export class SearchRepository {
     query: string,
     vector: number[] | null,
     limit: number,
+    maxDistance: number,
   ): Promise<SearchRow[]> {
     if (!vector) {
       return this.db.query(buildQuery(NO_VECTOR_HITS), [userId, query, limit]);
@@ -90,6 +92,7 @@ export class SearchRepository {
         limit,
         JSON.stringify(vector),
         CANDIDATES,
+        maxDistance,
       ]) as Promise<SearchRow[]>;
     });
   }

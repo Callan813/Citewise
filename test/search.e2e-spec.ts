@@ -117,6 +117,11 @@ describe('Search (e2e)', () => {
     expect(res.body.results[0]).not.toHaveProperty('embedding');
   });
 
+  it('returns nothing for a query unrelated to any document', async () => {
+    const res = await search(priya, 'qwxzv jkqyp').expect(200);
+    expect(res.body).toMatchObject({ mode: 'hybrid', results: [] });
+  });
+
   it('finds exact terms through keyword search alone', async () => {
     await uploadReady(priya, 'Port 8443 is used by XJ9Q gateways.', 'net.txt');
     provider.queriesDown = true;

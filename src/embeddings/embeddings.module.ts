@@ -11,7 +11,7 @@ import { GeminiEmbeddingProvider } from './gemini-embedding.provider.js';
       provide: EmbeddingProvider,
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfig, true>) =>
-        config.get('embedding', { infer: true }).provider === 'fake'
+        config.get('ai', { infer: true }).provider === 'fake'
           ? new FakeEmbeddingProvider()
           : new GeminiEmbeddingProvider(config),
     },

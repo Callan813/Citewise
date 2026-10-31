@@ -42,6 +42,19 @@ export interface SearchResponse {
   }[]
 }
 
+export interface AskSource {
+  number: number
+  documentId: string
+  filename: string
+  pageNumber: number
+  content: string
+}
+
+export interface AskResult {
+  sources: AskSource[]
+  mode: 'hybrid' | 'keyword'
+}
+
 export class ApiError extends Error {
   readonly status: number
 
@@ -77,7 +90,7 @@ export const setUnauthorizedHandler = (handler: () => void) => {
   onUnauthorized = handler
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function send(path: string, init: RequestInit = {}): Promise<Response> {
   const token = session.token()
   const headers = new Headers(init.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
@@ -89,9 +102,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(0, 'Could not reach the server. Is the backend running?')
   }
 
-  if (res.ok) {
-    return (res.status === 204 ? undefined : await res.json()) as T
-  }
+  if (res.ok) return res
 
   const body = (await res.json().catch(() => null)) as {
     message?: string | string[]
@@ -109,6 +120,49 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   throw new ApiError(res.status, message)
 }
 
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await send(path, init)
+  return (res.status === 204 ? undefined : await res.json()) as T
+}
+
+// EventSource can't send POST requests or auth headers, so the stream is read by
+// hand. Events are separated by a blank line and can arrive split across reads.
+async function askStream(
+  question: string,
+  onText: (text: string) => void,
+  signal: AbortSignal,
+): Promise<AskResult> {
+  const res = await send('/ask/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+    signal,
+  })
+  if (!res.body) throw new ApiError(0, 'Streaming is not supported here')
+
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) throw new ApiError(0, 'The answer was cut off. Please try again.')
+    buffer += value
+
+    let end: number
+    while ((end = buffer.indexOf('\n\n')) !== -1) {
+      const lines = buffer.slice(0, end).split('\n')
+      buffer = buffer.slice(end + 2)
+      const event = lines[0].replace('event: ', '')
+      const data: unknown = JSON.parse(lines[1].replace('data: ', ''))
+
+      if (event === 'delta') onText((data as { text: string }).text)
+      if (event === 'done') return data as AskResult
+      if (event === 'error') {
+        throw new ApiError(0, (data as { message: string }).message)
+      }
+    }
+  }
+}
+
 const jsonPost = (path: string, body: unknown) =>
   request<AuthResponse>(path, {
     method: 'POST',
@@ -124,6 +178,7 @@ export const api = {
   google: (idToken: string) => jsonPost('/auth/google', { idToken }),
   authConfig: () => request<{ googleClientId: string | null }>('/auth/config'),
 
+  askStream,
   search: (query: string) =>
     request<SearchResponse>('/search', {
       method: 'POST',

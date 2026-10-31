@@ -27,9 +27,14 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('1h'),
 
-  // "fake" is free and works offline, but its search results mean little.
-  EMBEDDING_PROVIDER: Joi.string().valid('gemini', 'fake').default('gemini'),
-  GEMINI_API_KEY: Joi.when('EMBEDDING_PROVIDER', {
+  // Used for embeddings and answers. "fake" is free and works offline, but its
+  // results don't mean much.
+  AI_PROVIDER: Joi.string().valid('gemini', 'fake').default('gemini'),
+  GEMINI_CHAT_MODEL: Joi.string().default('gemini-3.5-flash-lite'),
+  // Passages further than this from a question count as off-topic. Cosine
+  // distance runs from 0 (same meaning) to 2.
+  SEARCH_MAX_DISTANCE: Joi.number().min(0).max(2).default(0.4),
+  GEMINI_API_KEY: Joi.when('AI_PROVIDER', {
     is: 'fake',
     // oxlint-disable-next-line unicorn/no-thenable -- this is Joi's API
     then: Joi.string().allow('').default(''),

@@ -24,11 +24,15 @@ export const configuration = () => ({
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   },
-  embedding: {
-    provider: process.env.EMBEDDING_PROVIDER === 'fake' ? 'fake' : 'gemini',
+  ai: {
+    provider: process.env.AI_PROVIDER === 'fake' ? 'fake' : 'gemini',
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? '',
+    chatModel: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.5-flash-lite',
+  },
+  search: {
+    maxDistance: Number(process.env.SEARCH_MAX_DISTANCE ?? 0.4),
   },
 });
 

@@ -2,7 +2,7 @@
 
 Ask your documents questions and get answers that cite the exact page. You upload PDFs and text files, and every answer shows where it came from. I'm building it in phases to learn backend engineering and deployment properly.
 
-**Status:** work in progress. Accounts, background document processing, search and a small frontend work today. Asking questions doesn't work yet.
+**Status:** work in progress. Accounts, document processing, search and asking questions all work. Limits and deployment are next.
 
 ## What works so far
 
@@ -11,6 +11,8 @@ Ask your documents questions and get answers that cite the exact page. You uploa
 - Uploads return right away while a separate worker process extracts the text, with retries and a status you can watch
 - Text stored per page, so results can cite page numbers
 - Hybrid search that combines meaning (pgvector) with keywords (Postgres full-text), merged with reciprocal rank fusion
+- Answers from Gemini, streamed word by word over server-sent events, with citations that open the exact page
+- If nothing relevant is found, it says so without calling the model
 - Private documents plus a public type that everyone can read
 - Structured logs with request IDs, one error format, a health check and Swagger docs
 
@@ -31,7 +33,7 @@ npm run migration:run
 npm run dev
 ```
 
-Set `JWT_SECRET` in `.env` before starting. `.env.example` has a command that generates one. Search needs a free `GEMINI_API_KEY`, or set `EMBEDDING_PROVIDER=fake` to run offline without real semantic search.
+Set `JWT_SECRET` in `.env` before starting. `.env.example` has a command that generates one. Search and answers need a free `GEMINI_API_KEY`, or set `AI_PROVIDER=fake` to run offline with placeholder results.
 
 Documents uploaded before search existed can be indexed with `npm run reindex` after a build.
 
@@ -54,7 +56,6 @@ npm run test:e2e
 
 ## What's next
 
-- Asking questions, with cited and streamed answers
 - Caching, rate limits and usage quotas
 - An evaluation suite for answer quality
 - Deployment
