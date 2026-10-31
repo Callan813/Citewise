@@ -10,6 +10,7 @@ import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { HealthModule } from './health/health.module.js';
+import { SearchModule } from './search/search.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     AuthModule,
     DocumentsModule,
+    SearchModule,
     HealthModule,
   ],
   providers: [

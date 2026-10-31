@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import type { PageText, TextChunk } from './chunker.js';
+import { Chunk } from './entities/chunk.entity.js';
 import { DocumentPage } from './entities/document-page.entity.js';
 import {
   Document,
   DocumentStatus,
   DocumentVisibility,
 } from './entities/document.entity.js';
-import type { ExtractedPage } from './text-extractor.service.js';
 
 @Injectable()
 export class DocumentsRepository {
@@ -24,9 +25,24 @@ export class DocumentsRepository {
     return this.db.getRepository(Document).findOneBy({ id });
   }
 
-  // One transaction: pages and status change together or not at all. The row
-  // lock stops a delete from happening between the check and the insert.
-  completeIngestion(id: string, pages: ExtractedPage[]): Promise<void> {
+  findPages(documentId: string): Promise<DocumentPage[]> {
+    return this.db.getRepository(DocumentPage).find({
+      where: { documentId },
+      order: { pageNumber: 'ASC' },
+    });
+  }
+
+  countChunks(documentId: string): Promise<number> {
+    return this.db.getRepository(Chunk).countBy({ documentId });
+  }
+
+  // One transaction, so a crash can't leave pages without their chunks. The row
+  // lock stops a delete from happening between the check and the inserts.
+  saveExtraction(
+    id: string,
+    pages: PageText[],
+    chunks: TextChunk[],
+  ): Promise<void> {
     return this.db.transaction(async (tx) => {
       const document = await tx.findOne(Document, {
         where: { id },
@@ -35,16 +51,65 @@ export class DocumentsRepository {
       if (document?.status !== DocumentStatus.PROCESSING) return;
 
       await tx.delete(DocumentPage, { documentId: id });
+      await tx.delete(Chunk, { documentId: id });
       await tx.insert(
         DocumentPage,
-        pages.map((page) => ({ ...page, documentId: id })),
+        pages.map((page) => ({
+          documentId: id,
+          pageNumber: page.pageNumber,
+          content: page.content,
+        })),
       );
-      await tx.update(Document, id, {
-        status: DocumentStatus.READY,
-        pageCount: pages.length,
-        error: null,
-      });
+      await tx.insert(
+        Chunk,
+        chunks.map((chunk) => ({ ...chunk, documentId: id })),
+      );
     });
+  }
+
+  findUnembeddedChunks(documentId: string, limit: number): Promise<Chunk[]> {
+    return this.db
+      .getRepository(Chunk)
+      .createQueryBuilder('chunk')
+      .where('chunk.documentId = :documentId', { documentId })
+      .andWhere('chunk.embedding IS NULL')
+      .orderBy('chunk.chunkIndex', 'ASC')
+      .take(limit)
+      .getMany();
+  }
+
+  async saveEmbeddings(
+    embeddings: { id: string; vector: number[] }[],
+  ): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      for (const { id, vector } of embeddings) {
+        await tx.update(Chunk, id, { embedding: JSON.stringify(vector) });
+      }
+    });
+  }
+
+  // The last step, so a document never appears as ready and searchable while
+  // its chunks are only partly embedded.
+  async markReady(id: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const pageCount = await tx.countBy(DocumentPage, { documentId: id });
+      await tx.update(
+        Document,
+        { id, status: DocumentStatus.PROCESSING },
+        { status: DocumentStatus.READY, pageCount, error: null },
+      );
+    });
+  }
+
+  // For the reindex script.
+  async markUnchunkedForProcessing(): Promise<string[]> {
+    const [rows] = (await this.db.query(
+      `UPDATE documents d SET status = 'processing'
+       WHERE d.status = 'ready'
+         AND NOT EXISTS (SELECT 1 FROM chunks c WHERE c.document_id = d.id)
+       RETURNING d.id`,
+    )) as [{ id: string }[], number];
+    return rows.map((row) => row.id);
   }
 
   async markFailed(id: string, error: string): Promise<void> {

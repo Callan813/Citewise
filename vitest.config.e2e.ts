@@ -13,6 +13,7 @@ export default defineConfig({
       DATABASE_NAME: 'docintel_test',
       LOG_LEVEL: 'warn',
       REDIS_DB: '1',
+      EMBEDDING_PROVIDER: 'fake',
       GOOGLE_CLIENT_ID: 'test-client-id',
       STORAGE_DIR: 'uploads/test',
     },

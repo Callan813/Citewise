@@ -2,14 +2,15 @@
 
 Ask your documents questions and get answers that cite the exact page. You upload PDFs and text files, and every answer shows where it came from. I'm building it in phases to learn backend engineering and deployment properly.
 
-**Status:** work in progress. Accounts, background document processing and a small frontend work today. Asking questions doesn't work yet.
+**Status:** work in progress. Accounts, background document processing, search and a small frontend work today. Asking questions doesn't work yet.
 
 ## What works so far
 
 - Sign up with email and password (hashed with argon2) or continue with Google, using JWT access tokens either way
 - Upload PDF and text files up to 10 MB, checked by their actual bytes rather than their extension
 - Uploads return right away while a separate worker process extracts the text, with retries and a status you can watch
-- Text stored per page, so answers can cite page numbers later
+- Text stored per page, so results can cite page numbers
+- Hybrid search that combines meaning (pgvector) with keywords (Postgres full-text), merged with reciprocal rank fusion
 - Private documents plus a public type that everyone can read
 - Structured logs with request IDs, one error format, a health check and Swagger docs
 
@@ -30,7 +31,9 @@ npm run migration:run
 npm run dev
 ```
 
-Set `JWT_SECRET` in `.env` before starting. `.env.example` has a command that generates one.
+Set `JWT_SECRET` in `.env` before starting. `.env.example` has a command that generates one. Search needs a free `GEMINI_API_KEY`, or set `EMBEDDING_PROVIDER=fake` to run offline without real semantic search.
+
+Documents uploaded before search existed can be indexed with `npm run reindex` after a build.
 
 `npm run dev` starts the API, the worker and the frontend together.
 
@@ -51,7 +54,6 @@ npm run test:e2e
 
 ## What's next
 
-- Embeddings and hybrid search
 - Asking questions, with cited and streamed answers
 - Caching, rate limits and usage quotas
 - An evaluation suite for answer quality

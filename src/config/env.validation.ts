@@ -27,8 +27,14 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('1h'),
 
-  // Optional until the app calls Gemini. Tests will use a fake provider.
-  GEMINI_API_KEY: Joi.string().allow('').default(''),
+  // "fake" is free and works offline, but its search results mean little.
+  EMBEDDING_PROVIDER: Joi.string().valid('gemini', 'fake').default('gemini'),
+  GEMINI_API_KEY: Joi.when('EMBEDDING_PROVIDER', {
+    is: 'fake',
+    // oxlint-disable-next-line unicorn/no-thenable -- this is Joi's API
+    then: Joi.string().allow('').default(''),
+    otherwise: Joi.string().required(),
+  }),
 
   // Optional. Without it the app just doesn't offer Google sign-in.
   GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),

@@ -31,6 +31,17 @@ export interface DocumentList {
   offset: number
 }
 
+export interface SearchResponse {
+  mode: 'hybrid' | 'keyword'
+  results: {
+    chunkId: string
+    documentId: string
+    filename: string
+    pageNumber: number
+    content: string
+  }[]
+}
+
 export class ApiError extends Error {
   readonly status: number
 
@@ -112,6 +123,13 @@ export const api = {
     jsonPost('/auth/register', { email, password }),
   google: (idToken: string) => jsonPost('/auth/google', { idToken }),
   authConfig: () => request<{ googleClientId: string | null }>('/auth/config'),
+
+  search: (query: string) =>
+    request<SearchResponse>('/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    }),
 
   listDocuments: (limit: number, offset: number) =>
     request<DocumentList>(`/documents?limit=${limit}&offset=${offset}`),

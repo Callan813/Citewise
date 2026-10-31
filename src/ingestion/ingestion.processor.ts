@@ -8,9 +8,14 @@ import { ConfigService } from '@nestjs/config';
 import { type Job, UnrecoverableError, Worker } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import type { AppConfig } from '../config/configuration.js';
+import { chunkPages, type PageText } from '../documents/chunker.js';
 import { DocumentsRepository } from '../documents/documents.repository.js';
 import { DocumentStatus } from '../documents/entities/document.entity.js';
 import { TextExtractorService } from '../documents/text-extractor.service.js';
+import {
+  EmbeddingProvider,
+  EmbeddingRateLimitError,
+} from '../embeddings/embedding.provider.js';
 import { StorageService } from '../storage/storage.service.js';
 import {
   INGESTION_QUEUE,
@@ -18,6 +23,7 @@ import {
 } from './ingestion-queue.service.js';
 
 const GENERIC_FAILURE = 'Processing failed. Please try uploading again.';
+const EMBEDDING_BATCH_SIZE = 50;
 
 @Injectable()
 export class IngestionProcessor
@@ -30,6 +36,7 @@ export class IngestionProcessor
     private readonly documents: DocumentsRepository,
     private readonly extractor: TextExtractorService,
     private readonly storage: StorageService,
+    private readonly embeddings: EmbeddingProvider,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(IngestionProcessor.name);
@@ -38,7 +45,7 @@ export class IngestionProcessor
   onApplicationBootstrap(): void {
     this.worker = new Worker<IngestionJobData>(
       INGESTION_QUEUE,
-      (job) => this.process(job.data.documentId),
+      (job) => this.handle(job),
       {
         connection: {
           ...this.config.get('redis', { infer: true }),
@@ -60,17 +67,67 @@ export class IngestionProcessor
     this.worker.on('failed', (job, err) => void this.onFailed(job, err));
   }
 
-  // Safe to run more than once for the same document. A job can repeat after a
-  // retry or a worker crash, and the repository replaces any earlier pages.
+  private async handle(job: Job<IngestionJobData>): Promise<void> {
+    try {
+      await this.process(job.data.documentId);
+    } catch (err) {
+      // Pause the whole queue and put this job back, without counting an attempt.
+      if (err instanceof EmbeddingRateLimitError && this.worker) {
+        this.logger.warn(
+          { documentId: job.data.documentId, waitMs: err.retryAfterMs },
+          'Embedding rate limit reached, pausing the queue',
+        );
+        await this.worker.rateLimit(err.retryAfterMs);
+        throw Worker.RateLimitError();
+      }
+      throw err;
+    }
+  }
+
+  // Safe to run more than once, and it resumes rather than restarts. A job can
+  // repeat after a retry or a worker crash, and each finished step is skipped,
+  // so already embedded chunks don't use up API quota again.
   async process(documentId: string): Promise<void> {
     const document = await this.documents.findById(documentId);
     // Deleted while waiting in the queue, or already finished by an earlier run.
     if (document?.status !== DocumentStatus.PROCESSING) return;
-    if (!document.storageKey) throw new UnrecoverableError(GENERIC_FAILURE);
 
+    if ((await this.documents.countChunks(documentId)) === 0) {
+      // Documents from before chunks existed already have pages to reuse.
+      const stored = await this.documents.findPages(documentId);
+      const pages: PageText[] =
+        stored.length > 0 ? stored : await this.extractFile(document);
+      await this.documents.saveExtraction(documentId, pages, chunkPages(pages));
+    }
+
+    await this.embedChunks(documentId);
+    await this.documents.markReady(documentId);
+  }
+
+  private async extractFile(document: {
+    storageKey: string | null;
+    mimeType: string;
+  }): Promise<PageText[]> {
+    if (!document.storageKey) throw new UnrecoverableError(GENERIC_FAILURE);
     const file = await this.storage.read(document.storageKey);
-    const pages = await this.extract(file, document.mimeType);
-    await this.documents.completeIngestion(documentId, pages);
+    return this.extract(file, document.mimeType);
+  }
+
+  private async embedChunks(documentId: string): Promise<void> {
+    for (;;) {
+      const chunks = await this.documents.findUnembeddedChunks(
+        documentId,
+        EMBEDDING_BATCH_SIZE,
+      );
+      if (chunks.length === 0) return;
+
+      const vectors = await this.embeddings.embedDocuments(
+        chunks.map((chunk) => chunk.content),
+      );
+      await this.documents.saveEmbeddings(
+        chunks.map((chunk, i) => ({ id: chunk.id, vector: vectors[i] })),
+      );
+    }
   }
 
   private async extract(file: Buffer, mimeType: string) {

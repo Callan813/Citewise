@@ -24,6 +24,9 @@ export const configuration = () => ({
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   },
+  embedding: {
+    provider: process.env.EMBEDDING_PROVIDER === 'fake' ? 'fake' : 'gemini',
+  },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? '',
   },

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, type DocumentItem, type User } from './api'
 import { DocumentViewer } from './DocumentViewer'
+import { SearchBox } from './SearchBox'
 import { UploadBox } from './UploadBox'
 
 const PAGE_SIZE = 20
@@ -84,6 +85,8 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
       </header>
 
       <UploadBox onUploaded={() => void load()} />
+
+      <SearchBox />
 
       <section className="mt-8">
         <h2 className="mb-3 font-semibold">
