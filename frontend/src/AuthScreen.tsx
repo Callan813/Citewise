@@ -1,5 +1,6 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { api, ApiError, type AuthResponse } from './api'
+import { GoogleButton } from './GoogleButton'
 
 interface Props {
   onAuthenticated: (auth: AuthResponse) => void
@@ -11,8 +12,29 @@ export function AuthScreen({ onAuthenticated }: Props) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null)
 
   const isLogin = mode === 'login'
+
+  // The button only appears when the backend has Google sign-in set up.
+  useEffect(() => {
+    api
+      .authConfig()
+      .then((config) => setGoogleClientId(config.googleClientId))
+      .catch(() => setGoogleClientId(null))
+  }, [])
+
+  async function signInWithGoogle(idToken: string) {
+    setBusy(true)
+    setError('')
+    try {
+      onAuthenticated(await api.google(idToken))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -34,6 +56,16 @@ export function AuthScreen({ onAuthenticated }: Props) {
       <p className="mt-1 mb-8 text-muted">
         {isLogin ? 'Sign in to your documents.' : 'Create your account.'}
       </p>
+
+      {googleClientId && (
+        <div className="mb-6">
+          <GoogleButton
+            clientId={googleClientId}
+            onCredential={(idToken) => void signInWithGoogle(idToken)}
+          />
+          <p className="mt-6 text-center text-sm text-muted">or use your email</p>
+        </div>
+      )}
 
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-medium">

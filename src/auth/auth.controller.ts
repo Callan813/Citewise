@@ -1,15 +1,25 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator.js';
 import { AuthService } from './auth.service.js';
+import { AuthConfigResponseDto } from './dto/auth-config-response.dto.js';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
+import { GoogleLoginDto } from './dto/google-login.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 
@@ -25,6 +35,27 @@ export class AuthController {
   @ApiConflictResponse({ description: 'Email already registered' })
   register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
     return this.auth.register(dto);
+  }
+
+  // Tells the frontend which sign-in options to show.
+  @Get('config')
+  @ApiOkResponse({ type: AuthConfigResponseDto })
+  getConfig(): AuthConfigResponseDto {
+    return this.auth.getConfig();
+  }
+
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiUnauthorizedResponse({ description: 'The Google token is not valid' })
+  @ApiConflictResponse({
+    description: 'Email linked to another Google account',
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Google sign-in is not set up',
+  })
+  google(@Body() dto: GoogleLoginDto): Promise<AuthResponseDto> {
+    return this.auth.loginWithGoogle(dto.idToken);
   }
 
   // POST defaults to 201 Created, but logging in doesn't create anything.

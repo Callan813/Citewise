@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import argon2 from 'argon2';
@@ -6,9 +10,11 @@ import type { AppConfig } from '../config/configuration.js';
 import { UserResponseDto } from '../users/dto/user-response.dto.js';
 import type { User } from '../users/user.entity.js';
 import { UsersService } from '../users/users.service.js';
+import type { AuthConfigResponseDto } from './dto/auth-config-response.dto.js';
 import type { AuthResponseDto } from './dto/auth-response.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
+import { GoogleTokenVerifier } from './google-token.verifier.js';
 import type { JwtPayload } from './jwt-payload.interface.js';
 
 @Injectable()
@@ -21,6 +27,7 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly googleVerifier: GoogleTokenVerifier,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -38,14 +45,34 @@ export class AuthService {
     // Always run a hash check, even for unknown emails. Otherwise "no such user"
     // answers in 2ms and "wrong password" in 50ms, and an attacker can time the
     // responses to find out which emails have accounts.
+    // Google-only accounts have no password, so they take this path too.
     const hash = user?.passwordHash ?? (await this.dummyHash);
     const passwordOk = await argon2.verify(hash, dto.password);
 
-    if (!user || !passwordOk) {
+    if (!user?.passwordHash || !passwordOk) {
       // Same message for both cases, for the same reason.
       throw new UnauthorizedException('Invalid email or password');
     }
     return this.issueToken(user);
+  }
+
+  // After this, a Google user holds the same kind of token as anyone else, so
+  // the rest of the app doesn't need to know how they signed in.
+  async loginWithGoogle(idToken: string): Promise<AuthResponseDto> {
+    if (!this.googleClientId()) {
+      throw new ServiceUnavailableException('Google sign-in is not set up');
+    }
+    const profile = await this.googleVerifier.verify(idToken);
+    const user = await this.users.findOrCreateFromGoogle(profile);
+    return this.issueToken(user);
+  }
+
+  getConfig(): AuthConfigResponseDto {
+    return { googleClientId: this.googleClientId() || null };
+  }
+
+  private googleClientId(): string {
+    return this.config.get('google', { infer: true }).clientId;
   }
 
   private async issueToken(user: User): Promise<AuthResponseDto> {

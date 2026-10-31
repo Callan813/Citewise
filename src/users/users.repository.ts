@@ -25,9 +25,26 @@ export class UsersRepository {
       .getOne();
   }
 
-  async create(email: string, passwordHash: string): Promise<User> {
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.repo.findOneBy({ googleId });
+  }
+
+  findByEmail(email: string): Promise<User | null> {
+    return this.repo.findOneBy({ email });
+  }
+
+  // Removing the password is deliberate: see UsersService.findOrCreateFromGoogle.
+  async linkGoogle(id: string, googleId: string): Promise<void> {
+    await this.repo.update(id, { googleId, passwordHash: null });
+  }
+
+  async create(
+    email: string,
+    passwordHash: string | null,
+    googleId: string | null = null,
+  ): Promise<User> {
     const saved = await this.repo.save(
-      this.repo.create({ email, passwordHash }),
+      this.repo.create({ email, passwordHash, googleId }),
     );
     // Don't hand the hash back to callers, even right after creating it.
     const { passwordHash: _omit, ...user } = saved;

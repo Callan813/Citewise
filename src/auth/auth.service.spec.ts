@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import argon2 from 'argon2';
 import { UsersService } from '../users/users.service.js';
 import { AuthService } from './auth.service.js';
+import { GoogleTokenVerifier } from './google-token.verifier.js';
 
 // A unit test: AuthService alone, with its dependencies replaced by fakes.
 // This is where dependency injection pays off - no database, no HTTP.
@@ -23,6 +24,7 @@ describe('AuthService', () => {
           useValue: { signAsync: vi.fn().mockResolvedValue('signed.jwt') },
         },
         { provide: ConfigService, useValue: { get: () => '1h' } },
+        { provide: GoogleTokenVerifier, useValue: { verify: vi.fn() } },
       ],
     }).compile();
     service = moduleRef.get(AuthService);

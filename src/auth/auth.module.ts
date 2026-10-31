@@ -7,6 +7,10 @@ import type { AppConfig } from '../config/configuration.js';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import {
+  GoogleAuthLibraryVerifier,
+  GoogleTokenVerifier,
+} from './google-token.verifier.js';
 
 @Module({
   imports: [
@@ -33,6 +37,7 @@ import { AuthService } from './auth.service.js';
   controllers: [AuthController],
   providers: [
     AuthService,
+    { provide: GoogleTokenVerifier, useClass: GoogleAuthLibraryVerifier },
     // Secure by default: every route in the app needs a valid token unless
     // it's marked @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
