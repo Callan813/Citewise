@@ -1,0 +1,46 @@
+{
+  "answerable": [
+    { "question": "Two programs each hold something the other needs and neither can continue. What is this called and what conditions cause it?", "file": "Operating_Systems_Notes.txt", "passage": "Coffman", "answer": ["circular wait"] },
+    { "question": "How can resources be requested so that circular waiting can never happen?", "file": "Operating_Systems_Notes.txt", "passage": "fixed global order", "answer": ["order"] },
+    { "question": "What happens when a program touches memory that isn't currently loaded in RAM?", "file": "Operating_Systems_Notes.txt", "passage": "page fault occurs", "answer": ["page fault"] },
+    { "question": "Why can giving a system more memory frames sometimes produce more faults?", "file": "Operating_Systems_Notes.txt", "passage": "Belady", "answer": ["Belady"] },
+    { "question": "What stops low priority jobs from never getting the CPU?", "file": "Operating_Systems_Notes.txt", "passage": "aging", "answer": ["aging"] },
+    { "question": "What is the downside of making the round robin time slice extremely small?", "file": "Operating_Systems_Notes.txt", "passage": "time quantum", "answer": ["context switch"] },
+    { "question": "Why do address translations usually avoid a second memory access?", "file": "Operating_Systems_Notes.txt", "passage": "translation lookaside buffer", "answer": ["lookaside", "TLB"] },
+    { "question": "What does an inode store?", "file": "Operating_Systems_Notes.txt", "passage": "inode stores", "answer": ["metadata"] },
+    { "question": "Why is the system spending all of its time swapping instead of doing work?", "file": "Operating_Systems_Notes.txt", "passage": "Thrashing", "answer": ["thrashing"] },
+    { "question": "What is the convoy effect?", "file": "Operating_Systems_Notes.txt", "passage": "convoy effect", "answer": ["long job", "short"] },
+
+    { "question": "What is the difference between 2NF and 3NF?", "file": "DBMS_Notes.txt", "passage": "Second normal form 2NF", "answer": ["transitive"] },
+    { "question": "How does a database recover committed work after a power failure?", "file": "DBMS_Notes.txt", "passage": "Write-ahead logging", "answer": ["log"] },
+    { "question": "What does the D in ACID guarantee?", "file": "DBMS_Notes.txt", "passage": "Durability means", "answer": ["crash", "survive"] },
+    { "question": "Which index type should I avoid if my query asks for a range of values?", "file": "DBMS_Notes.txt", "passage": "hash index", "answer": ["hash"] },
+    { "question": "How can readers avoid being blocked by people writing to the same rows?", "file": "DBMS_Notes.txt", "passage": "Multi-version concurrency control", "answer": ["version", "snapshot", "MVCC"] },
+    { "question": "When would I use HAVING instead of WHERE?", "file": "DBMS_Notes.txt", "passage": "HAVING", "answer": ["group"] },
+    { "question": "Why can a table only have one clustered index?", "file": "DBMS_Notes.txt", "passage": "clustered index", "answer": ["physical"] },
+    { "question": "What is a dirty read and which isolation level allows it?", "file": "DBMS_Notes.txt", "passage": "dirty reads", "answer": ["uncommitted"] },
+    { "question": "What must a distributed database give up during a network partition?", "file": "DBMS_Notes.txt", "passage": "CAP theorem", "answer": ["consistency", "availability"] },
+    { "question": "What is BCNF?", "file": "DBMS_Notes.txt", "passage": "BCNF", "answer": ["superkey"] },
+
+    { "question": "How does TCP grow its sending rate when a connection starts?", "file": "Computer_Networks_Notes.txt", "passage": "slow start", "answer": ["doubles", "double"] },
+    { "question": "How is a TCP connection opened?", "file": "Computer_Networks_Notes.txt", "passage": "three-way handshake", "answer": ["SYN"] },
+    { "question": "What's the difference between flow control and congestion control?", "file": "Computer_Networks_Notes.txt", "passage": "Flow control", "answer": ["receiver"] },
+    { "question": "Why would a video call prefer a protocol that doesn't retransmit lost packets?", "file": "Computer_Networks_Notes.txt", "passage": "UDP sends", "answer": ["UDP"] },
+    { "question": "How do many devices at home share a single public address?", "file": "Computer_Networks_Notes.txt", "passage": "NAT", "answer": ["NAT"] },
+    { "question": "How does a device on a network find the hardware address for an IP?", "file": "Computer_Networks_Notes.txt", "passage": "ARP", "answer": ["ARP"] },
+    { "question": "Which routing protocol uses Dijkstra's algorithm?", "file": "Computer_Networks_Notes.txt", "passage": "OSPF", "answer": ["OSPF"] },
+    { "question": "What does a /24 mean in an IP address?", "file": "Computer_Networks_Notes.txt", "passage": "CIDR", "answer": ["network bits"] },
+    { "question": "Why does HTTP/3 avoid head-of-line blocking?", "file": "Computer_Networks_Notes.txt", "passage": "QUIC", "answer": ["QUIC"] },
+    { "question": "What triggers a retransmission before the timeout expires?", "file": "Computer_Networks_Notes.txt", "passage": "duplicate acknowledgements", "answer": ["duplicate"] }
+  ],
+  "unanswerable": [
+    "What is the best recipe for chicken biryani?",
+    "Who won the 2011 Cricket World Cup?",
+    "What is the capital of France?",
+    "How do I train a convolutional neural network?",
+    "What is the time complexity of quicksort?",
+    "How does a transistor amplify a signal?",
+    "What is Kubernetes used for?",
+    "Explain the theory of general relativity."
+  ]
+}

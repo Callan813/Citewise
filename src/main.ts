@@ -15,7 +15,9 @@ async function bootstrap() {
 
   const config = app.get(ConfigService<AppConfig, true>);
 
+  const basePath = config.get('apiBasePath', { infer: true });
   const swaggerConfig = new DocumentBuilder()
+    .addServer(basePath || '/')
     .setTitle('Citewise API')
     .setDescription(
       'Ask your documents questions and get answers with page citations.',

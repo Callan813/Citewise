@@ -36,21 +36,33 @@ const VECTOR_HITS = `
 `;
 const NO_VECTOR_HITS = `SELECT NULL::uuid AS id, NULL::bigint AS rank WHERE false`;
 
-const KEYWORD_HITS = `
+// Matches any word of the query, because a natural question rarely has all its
+// words in one passage. Requiring all of them scored 23% in the evaluation.
+const keywordHits = (guard = '') => `
     SELECT id, ROW_NUMBER() OVER (ORDER BY text_rank DESC) AS rank FROM (
       SELECT c.id, ts_rank_cd(to_tsvector('english', c.content), query) AS text_rank
       FROM chunks c
       JOIN documents d ON d.id = c.document_id,
-      websearch_to_tsquery('english', $2) AS query
-      WHERE to_tsvector('english', c.content) @@ query AND ${SEARCHABLE}
+      to_tsquery('english', replace(plainto_tsquery('english', $2)::text, '&', '|')) AS query
+      WHERE to_tsvector('english', c.content) @@ query AND ${SEARCHABLE} ${guard}
       ORDER BY text_rank DESC
       LIMIT ${CANDIDATES}
     ) matched
 `;
 
-const buildQuery = (vectorHits: string, keywordHits = KEYWORD_HITS) => `
+// Any-word matching alone would let an off-topic question through on one shared
+// word like "time". So when meaning search is working, keyword matches only count
+// if it also found something relevant, or if every word of the query matched.
+const GUARDED_KEYWORD_HITS = keywordHits(`
+  AND (
+    EXISTS (SELECT 1 FROM vector_hits)
+    OR to_tsvector('english', c.content) @@ plainto_tsquery('english', $2)
+  )
+`);
+
+const buildQuery = (vectorHits: string, keywords: string) => `
   WITH vector_hits AS (${vectorHits}),
-  keyword_hits AS (${keywordHits}),
+  keyword_hits AS (${keywords}),
   fused AS (
     SELECT
       COALESCE(v.id, k.id) AS id,
@@ -94,17 +106,21 @@ export class SearchRepository {
     keywords = true,
   ): Promise<SearchRow[]> {
     if (!vector) {
-      return this.db.query(buildQuery(NO_VECTOR_HITS), [userId, query, limit]);
+      return this.db.query(buildQuery(NO_VECTOR_HITS, keywordHits()), [
+        userId,
+        query,
+        limit,
+      ]);
     }
     return this.db.transaction(async (tx) => {
       // HNSW finds nearest neighbours first and applies the access filter after,
       // so a user with few documents could get too few results. This keeps it
       // scanning until the limit is met. SET LOCAL ends with the transaction.
       await tx.query(`SET LOCAL hnsw.iterative_scan = relaxed_order`);
-      const keywordHits = keywords
-        ? KEYWORD_HITS
+      const keywordQuery = keywords
+        ? GUARDED_KEYWORD_HITS
         : `SELECT NULL::uuid AS id, NULL::bigint AS rank WHERE $2::text IS NULL`;
-      return tx.query(buildQuery(VECTOR_HITS, keywordHits), [
+      return tx.query(buildQuery(VECTOR_HITS, keywordQuery), [
         userId,
         query,
         limit,

@@ -38,6 +38,7 @@ export const configuration = () => ({
   metrics: {
     token: process.env.METRICS_TOKEN ?? '',
   },
+  apiBasePath: process.env.API_BASE_PATH ?? '',
   storageDir: process.env.STORAGE_DIR ?? 'uploads',
   jwt: {
     secret: process.env.JWT_SECRET!,

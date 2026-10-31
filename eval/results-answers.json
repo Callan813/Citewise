@@ -1,0 +1,48 @@
+{
+  "corpus": {
+    "documents": 3,
+    "chunks": 17
+  },
+  "questions": {
+    "answerable": 30,
+    "unanswerable": 8
+  },
+  "k": 5,
+  "retrieval": {
+    "vector": {
+      "recallAt1": 80,
+      "recallAt5": 100,
+      "mrr": 0.9,
+      "missed": []
+    },
+    "keyword": {
+      "recallAt1": 86.7,
+      "recallAt5": 96.7,
+      "mrr": 0.911,
+      "missed": [
+        "When would I use HAVING instead of WHERE?"
+      ]
+    },
+    "hybrid": {
+      "recallAt1": 90,
+      "recallAt5": 96.7,
+      "mrr": 0.933,
+      "missed": [
+        "When would I use HAVING instead of WHERE?"
+      ]
+    }
+  },
+  "cutoff": {
+    "maxDistance": 0.4,
+    "answerableKeptPercent": 100,
+    "unanswerableBlockedPercent": 100,
+    "reachedModelAnyway": []
+  },
+  "answers": {
+    "answeredWithExpectedTermPercent": 100,
+    "includedCitationPercent": 100,
+    "correctlyRefusedPercent": 100,
+    "wrong": [],
+    "invented": []
+  }
+}

@@ -26,7 +26,9 @@
     "migration:show": "typeorm migration:show -d dist/database/data-source.js",
     "dev": "npm run build && concurrently -n tsc,api,worker,web -c gray,blue,magenta,green \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"node --enable-source-maps --watch-path=dist dist/main.js\" \"node --enable-source-maps --watch-path=dist dist/worker.js\" \"npm --prefix frontend run dev\"",
     "start:worker": "node dist/worker.js",
-    "reindex": "node dist/reindex.js"
+    "reindex": "node dist/scripts/reindex.js",
+    "seed": "node dist/scripts/seed.js",
+    "eval": "node dist/scripts/evaluate.js"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

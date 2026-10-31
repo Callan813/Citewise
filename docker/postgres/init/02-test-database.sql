@@ -4,3 +4,9 @@ CREATE DATABASE docintel_test;
 \connect docintel_test
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- A scratch database for the search evaluation.
+CREATE DATABASE docintel_eval;
+\connect docintel_eval
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;

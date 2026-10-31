@@ -1,0 +1,24 @@
+Computer Networks Notes
+
+Layered models
+The TCP/IP model has four layers: link, internet, transport and application. The OSI model has seven: physical, data link, network, transport, session, presentation and application. Each layer adds its own header around the data from the layer above, a process called encapsulation.
+
+IP addressing
+An IPv4 address is 32 bits and an IPv6 address is 128 bits. Subnetting divides a network into smaller networks using a subnet mask, and CIDR notation such as /24 gives the number of network bits. NAT lets many devices on a private network share one public address by rewriting addresses and ports at the router. ARP finds the MAC address that belongs to an IP address on the local network. DHCP automatically gives a joining device its IP address, gateway and DNS server.
+
+Routing
+Routers forward packets using a routing table and the longest prefix match rule. Distance vector protocols such as RIP share routes with neighbours and can suffer from the count to infinity problem. Link state protocols such as OSPF flood the network map to all routers, and each one computes shortest paths with Dijkstra's algorithm. BGP is the path vector protocol that routes traffic between autonomous systems across the internet.
+
+TCP
+TCP gives a reliable, ordered byte stream over an unreliable network. A connection begins with a three-way handshake of SYN, SYN-ACK and ACK, which also agrees on starting sequence numbers. TIME_WAIT keeps a closed connection's state for a while so that delayed packets are not mistaken for a new connection.
+
+Flow control stops a fast sender from overwhelming a slow receiver. The receiver advertises a window saying how much data it can accept. Congestion control instead protects the network itself. In slow start, the congestion window doubles every round trip until it reaches a threshold, after which congestion avoidance grows it by one segment per round trip. On a timeout, the threshold is cut to half and the window restarts small. Three duplicate acknowledgements trigger fast retransmit of the missing segment without waiting for a timeout.
+
+UDP
+UDP sends independent datagrams with no connection, ordering or retransmission. Its small header and lack of handshake make it suitable for DNS lookups, voice, video and games, where a late packet is useless anyway.
+
+Application protocols
+DNS translates domain names into IP addresses through a hierarchy of root, top-level domain and authoritative servers, and resolvers cache answers for the time given by the TTL. HTTP is a stateless request and response protocol. Status codes in the 200 range mean success, 300 redirection, 400 client errors and 500 server errors. Cookies add state on top of HTTP. HTTP/2 multiplexes many streams over one connection, and HTTP/3 runs on QUIC over UDP, which avoids TCP head-of-line blocking.
+
+Security
+TLS protects data in transit. The handshake uses asymmetric cryptography and certificates to authenticate the server and agree on a shared key, and the bulk of the data then uses faster symmetric encryption. A firewall filters traffic using rules on addresses, ports and protocols. A VPN builds an encrypted tunnel across an untrusted network.

@@ -1,0 +1,27 @@
+Database Management Systems Notes
+
+Keys
+A primary key uniquely identifies each row in a table and cannot be null. A candidate key is any minimal set of columns that could serve as the primary key. A foreign key in one table refers to the primary key of another table and enforces referential integrity, so a row cannot point at a parent that does not exist.
+
+Normalization
+Normalization organises tables to reduce redundancy and avoid update, insert and delete anomalies. First normal form 1NF requires atomic values with no repeating groups. Second normal form 2NF removes partial dependencies, where a non-key column depends on only part of a composite key. Third normal form 3NF removes transitive dependencies, where a non-key column depends on another non-key column. Boyce-Codd normal form BCNF is stricter than 3NF and requires that the left side of every functional dependency is a superkey. Denormalization deliberately adds redundancy back to make read-heavy queries faster.
+
+SQL
+INNER JOIN returns only rows that match in both tables. LEFT JOIN keeps every row from the left table and fills missing right columns with NULL. WHERE filters rows before grouping, while HAVING filters groups after aggregation. A view is a stored query that behaves like a virtual table, and a materialized view stores its result physically and must be refreshed.
+
+Transactions and ACID
+A transaction is a unit of work that either happens fully or not at all. ACID stands for atomicity, consistency, isolation and durability. Atomicity means all of a transaction's changes commit or none do. Consistency means a transaction takes the database from one valid state to another. Isolation means concurrent transactions do not see each other's partial work. Durability means committed work survives a crash.
+
+Write-ahead logging supports atomicity and durability. Changes are recorded in a log on stable storage before the data pages are updated, so after a power failure the database replays committed work and undoes unfinished work.
+
+Isolation levels
+Read uncommitted allows dirty reads of data another transaction has not committed. Read committed prevents dirty reads but allows non-repeatable reads. Repeatable read keeps rows stable for the whole transaction but can allow phantom rows in the standard definition. Serializable gives the strongest guarantee, behaving as if transactions ran one after another.
+
+Concurrency control
+Two-phase locking has a growing phase where a transaction acquires locks and a shrinking phase where it releases them, which guarantees serializable schedules but can cause deadlocks. Multi-version concurrency control keeps several versions of a row, so readers see a snapshot and do not block writers.
+
+Indexing
+An index speeds up reads at the cost of extra storage and slower writes. A B+ tree index keeps keys in sorted order with all data pointers in linked leaf nodes, which makes range queries efficient. A hash index gives fast equality lookups but cannot serve range queries. A clustered index determines the physical order of rows, so a table can have only one. A covering index contains every column a query needs, so the database can answer from the index without visiting the table.
+
+Scaling
+Replication copies data to several servers to improve read capacity and availability. Sharding splits a table across servers by a shard key to scale writes, but queries across shards become harder. The CAP theorem says that during a network partition, a distributed system must choose between consistency and availability.

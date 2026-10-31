@@ -42,6 +42,9 @@ export const envValidationSchema = Joi.object({
   // Empty turns the /metrics endpoint off.
   METRICS_TOKEN: Joi.string().allow('').default(''),
 
+  // Where a reverse proxy mounts the API, so Swagger's "Try it out" calls work.
+  API_BASE_PATH: Joi.string().allow('').default(''),
+
   STORAGE_DIR: Joi.string().default('uploads'),
 
   // Anyone holding this secret can mint a valid token for any user.

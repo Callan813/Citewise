@@ -1,0 +1,26 @@
+Operating Systems Notes
+
+Processes and threads
+A process is a program in execution with its own address space, open files and registers. A thread is a unit of execution inside a process. Threads of the same process share memory and files but each has its own stack and program counter. Switching between threads of one process is cheaper than switching between processes because the memory map does not change.
+
+A context switch saves the state of the running task into its process control block and restores the state of the next task. The time spent switching does no useful work, so very frequent switching lowers throughput.
+
+CPU scheduling
+First come first served runs jobs in arrival order, and a long job at the front makes every short job behind it wait. This is called the convoy effect. Shortest job first gives the lowest average waiting time, but it needs to know job lengths in advance and can starve long jobs. Round robin gives each ready process a fixed time quantum in turn. A very large quantum behaves like first come first served, while a very small one wastes time on context switches. Priority scheduling can starve low priority tasks, and aging fixes this by slowly raising the priority of tasks that have waited a long time.
+
+Synchronization
+A race condition happens when the result depends on the timing of threads that access shared data. The critical section is the code that touches the shared data, and a correct solution needs mutual exclusion, progress and bounded waiting. A mutex is a lock owned by one thread at a time. A semaphore is a counter with atomic wait and signal operations, and a counting semaphore can admit several threads at once to a pool of resources. A monitor bundles shared data with the procedures that use it and allows one thread inside at a time.
+
+Deadlock
+A deadlock is a state where a set of processes wait forever because each holds a resource another one needs. Four Coffman conditions must all hold at once: mutual exclusion, hold and wait, no preemption and circular wait. Prevention breaks one of these conditions, for example by making every process request resources in a fixed global order, which rules out circular wait. Avoidance, as in the Banker's algorithm, grants a request only if the system stays in a safe state. Detection lets deadlock happen, finds cycles in a wait-for graph, and then recovers by killing a process or preempting a resource.
+
+Memory management
+Paging divides virtual memory into fixed size pages and physical memory into frames of the same size. The page table maps page numbers to frame numbers. Paging removes external fragmentation but can waste part of the last page of a process, which is internal fragmentation. Segmentation divides memory into variable sized logical units such as code and stack, and it suffers from external fragmentation.
+
+A translation lookaside buffer is a small fast cache of recent page table entries. It avoids a second memory access for most address translations because programs show locality of reference.
+
+Virtual memory
+Demand paging loads a page only when it is first used. A page fault occurs when a program touches a page that is not in RAM. The operating system then finds a free frame, reads the page from disk, updates the page table and restarts the instruction. When no frame is free, a replacement algorithm picks a victim. Least recently used approximates the best choice using past behaviour. FIFO is simple but can suffer from Belady's anomaly, where adding more frames causes more page faults. Thrashing occurs when processes spend more time swapping pages than running, usually because too many processes are competing for too few frames.
+
+File systems and disks
+An inode stores a file's metadata and the locations of its data blocks, but not its name. Directory entries map names to inode numbers, so a hard link is simply a second name for the same inode. Journaling writes intended changes to a log before applying them, so the file system can recover quickly after a crash. Disk scheduling reduces seek time on hard disks: SSTF picks the nearest request but can starve distant ones, while the SCAN elevator algorithm sweeps the head back and forth across the disk.

@@ -2,13 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
-import { LoggerModule } from './common/logger/logger.module.js';
-import { configuration } from './config/configuration.js';
-import { validateEnv } from './config/env.validation.js';
-import { DatabaseModule } from './database/database.module.js';
-import { DocumentsRepository } from './documents/documents.repository.js';
-import { IngestionQueueModule } from './ingestion/ingestion-queue.module.js';
-import { IngestionQueueService } from './ingestion/ingestion-queue.service.js';
+import { LoggerModule } from '../common/logger/logger.module.js';
+import { configuration } from '../config/configuration.js';
+import { validateEnv } from '../config/env.validation.js';
+import { DatabaseModule } from '../database/database.module.js';
+import { DocumentsRepository } from '../documents/documents.repository.js';
+import { IngestionQueueModule } from '../ingestion/ingestion-queue.module.js';
+import { IngestionQueueService } from '../ingestion/ingestion-queue.service.js';
 
 @Module({
   imports: [
