@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: docintel
+          POSTGRES_PASSWORD: docintel
+          POSTGRES_DB: docintel_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U docintel"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+      redis-cache:
+        image: redis:7-alpine
+        ports: ["6381:6379"]
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: docintel
+      DATABASE_PASSWORD: docintel
+      DATABASE_NAME: docintel_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: only-for-ci-not-a-real-secret-0123456789
+      AI_PROVIDER: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:e2e
+      - name: Check migrations match the entities
+        run: |
+          npx typeorm migration:run -d dist/database/data-source.js
+          npx typeorm migration:generate -d dist/database/data-source.js --check src/database/migrations/Drift
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t citewise-app .
+      - run: docker build -f deploy/web.Dockerfile -t citewise-web .

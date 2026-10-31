@@ -1,0 +1,29 @@
+# SITE_ADDRESS is your domain, and Caddy gets and renews the HTTPS certificate by
+# itself. Use :80 to test locally without HTTPS.
+{$SITE_ADDRESS} {
+	encode gzip
+
+	# Metrics are only for Prometheus on the internal network.
+	respond /api/metrics 404
+
+	handle_path /api/* {
+		reverse_proxy api:4000 {
+			# Send streamed answers straight on instead of buffering them.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		# Limits what a script injected into the page could load or contact.
+		# Google's domains are only there for the sign-in button.
+		header {
+			Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/; img-src 'self' data:; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			Cross-Origin-Opener-Policy "same-origin-allow-popups"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+		}
+		try_files {path} /index.html
+		file_server
+	}
+}

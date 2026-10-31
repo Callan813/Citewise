@@ -1,0 +1,167 @@
+# Run with:  docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Only Caddy is reachable from outside. Everything else stays on the internal network.
+x-app-env: &app-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DATABASE_HOST: postgres
+  DATABASE_PORT: 5432
+  DATABASE_USER: ${DATABASE_USER:?set in .env.production}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:?set in .env.production}
+  DATABASE_NAME: ${DATABASE_NAME:?set in .env.production}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  CACHE_REDIS_HOST: redis-cache
+  CACHE_REDIS_PORT: 6379
+  JWT_SECRET: ${JWT_SECRET:?set in .env.production}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+  AI_PROVIDER: ${AI_PROVIDER:-gemini}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash-lite}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  SEARCH_MAX_DISTANCE: ${SEARCH_MAX_DISTANCE:-0.4}
+  DAILY_QUESTION_LIMIT: ${DAILY_QUESTION_LIMIT:-30}
+  DAILY_QUESTION_LIMIT_GLOBAL: ${DAILY_QUESTION_LIMIT_GLOBAL:-300}
+  DAILY_UPLOAD_LIMIT: ${DAILY_UPLOAD_LIMIT:-20}
+  MAX_DOCUMENTS_PER_USER: ${MAX_DOCUMENTS_PER_USER:-50}
+  TRUST_PROXY_HOPS: 1 # Caddy sits in front
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  API_BASE_PATH: /api
+  STORAGE_DIR: /app/uploads
+  DEMO_EMAIL: ${DEMO_EMAIL:-}
+  DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set in .env.production}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy_data:/data # keeps HTTPS certificates across restarts
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build: .
+    image: citewise-app
+    restart: unless-stopped
+    environment: *app-env
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: citewise-app
+    restart: unless-stopped
+    command: ["node", "--enable-source-maps", "dist/worker.js"]
+    environment: *app-env
+    volumes:
+      - uploads:/app/uploads # the API saves files here and the worker reads them
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Runs once per deploy, before the app starts. If a migration fails, the old
+  # version keeps running rather than new code meeting an old schema.
+  migrate:
+    build: .
+    image: citewise-app
+    command: ["npx", "typeorm", "migration:run", "-d", "dist/database/data-source.js"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis-cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional: add --profile monitoring. Grafana is only on the server's localhost,
+  # so reach it through an SSH tunnel:  ssh -L 3000:localhost:3000 you@server
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    configs:
+      - source: metrics_token
+        target: /etc/prometheus/metrics_token
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./deploy/monitoring/grafana:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+configs:
+  metrics_token:
+    content: ${METRICS_TOKEN:-unset}
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  caddy_data:
+  prometheus_data:
+  grafana_data:
