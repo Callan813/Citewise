@@ -30,7 +30,7 @@ export function AuthScreen({ onAuthenticated }: Props) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-10">
-      <h1 className="text-2xl font-semibold">Document Intelligence</h1>
+      <h1 className="text-2xl font-semibold">Citewise</h1>
       <p className="mt-1 mb-8 text-muted">
         {isLogin ? 'Sign in to your documents.' : 'Create your account.'}
       </p>

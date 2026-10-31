@@ -1,6 +1,6 @@
-# Document Intelligence Service
+# Citewise
 
-A backend where you upload PDFs and text files and ask questions about them, with answers that cite the page they came from. I'm building it in phases to learn backend engineering and deployment properly.
+Ask your documents questions and get answers that cite the exact page. You upload PDFs and text files, and every answer shows where it came from. I'm building it in phases to learn backend engineering and deployment properly.
 
 **Status:** work in progress. Accounts, uploads, page-by-page text extraction and a small frontend work today. Asking questions doesn't work yet.
 

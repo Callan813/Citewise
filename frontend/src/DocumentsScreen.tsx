@@ -62,7 +62,7 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h1 className="text-xl font-semibold">Document Intelligence</h1>
+        <h1 className="text-xl font-semibold">Citewise</h1>
         <div className="flex min-w-0 items-center gap-3 text-sm">
           <span className="truncate text-muted">{user.email}</span>
           <button

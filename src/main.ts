@@ -16,8 +16,8 @@ async function bootstrap() {
   const config = app.get(ConfigService<AppConfig, true>);
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Document Intelligence Service')
-    .setDescription('Upload documents and ask questions about them.')
+    .setTitle('Citewise API')
+    .setDescription('Ask your documents questions and get answers with page citations.')
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();
