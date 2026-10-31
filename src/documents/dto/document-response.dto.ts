@@ -24,6 +24,9 @@ export class DocumentResponseDto {
   @ApiProperty({ enum: DocumentStatus })
   status: DocumentStatus;
 
+  @ApiProperty({ type: String, nullable: true })
+  error: string | null;
+
   @ApiProperty({ enum: DocumentVisibility })
   visibility: DocumentVisibility;
 
@@ -42,6 +45,7 @@ export class DocumentResponseDto {
       sizeBytes: document.sizeBytes,
       pageCount: document.pageCount,
       status: document.status,
+      error: document.error,
       visibility: document.visibility,
       isOwner: document.userId === userId,
       uploadDate: document.uploadDate,

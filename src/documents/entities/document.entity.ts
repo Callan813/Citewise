@@ -49,12 +49,19 @@ export class Document {
   @Column({ name: 'size_bytes', type: 'integer' })
   sizeBytes: number;
 
-  @Column({ name: 'page_count', type: 'integer' })
+  @Column({ name: 'page_count', type: 'integer', default: 0 })
   pageCount: number;
 
-  // Everything is 'ready' for now. Phase 4 starts uploads at 'processing'.
-  @Column({ type: 'varchar', length: 20, default: DocumentStatus.READY })
+  // Where the original file is. Null for documents from before files were kept.
+  @Column({ name: 'storage_key', type: 'varchar', length: 255, nullable: true })
+  storageKey: string | null;
+
+  @Column({ type: 'varchar', length: 20, default: DocumentStatus.PROCESSING })
   status: DocumentStatus;
+
+  // Why processing failed, in words that are safe to show the user.
+  @Column({ type: 'text', nullable: true })
+  error: string | null;
 
   @Column({ type: 'varchar', length: 20, default: DocumentVisibility.PRIVATE })
   visibility: DocumentVisibility;

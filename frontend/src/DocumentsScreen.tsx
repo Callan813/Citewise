@@ -44,6 +44,14 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
     void load()
   }, [load])
 
+  // Keep checking while the worker is busy, and stop once everything is done.
+  const processing = documents?.some((d) => d.status === 'processing') ?? false
+  useEffect(() => {
+    if (!processing) return
+    const timer = setInterval(() => void load(), 2000)
+    return () => clearInterval(timer)
+  }, [processing, load])
+
   async function remove(document: DocumentItem) {
     if (!window.confirm(`Delete "${document.filename}"? This can't be undone.`)) {
       return
@@ -104,21 +112,37 @@ export function DocumentsScreen({ user, onSignOut }: Props) {
                 <div className="min-w-0 flex-1 basis-56">
                   <p className="truncate font-medium">{document.filename}</p>
                   <p className="text-sm text-muted">
-                    {document.pageCount}{' '}
-                    {document.pageCount === 1 ? 'page' : 'pages'} ·{' '}
+                    {document.status === 'ready' && (
+                      <>
+                        {document.pageCount}{' '}
+                        {document.pageCount === 1 ? 'page' : 'pages'} ·{' '}
+                      </>
+                    )}
+                    {document.status === 'processing' && (
+                      <span className="font-medium text-accent">
+                        Processing… ·{' '}
+                      </span>
+                    )}
                     {formatSize(document.sizeBytes)} ·{' '}
                     {new Date(document.uploadDate).toLocaleDateString()}
                     {document.visibility === 'public' && ' · Public'}
                   </p>
+                  {document.status === 'failed' && (
+                    <p className="mt-1 text-sm break-words text-danger">
+                      {document.error ?? 'Processing failed.'}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewing(document)}
-                    className="rounded-md border border-line px-3 py-1 text-sm hover:bg-paper"
-                  >
-                    Read
-                  </button>
+                  {document.status === 'ready' && (
+                    <button
+                      type="button"
+                      onClick={() => setViewing(document)}
+                      className="rounded-md border border-line px-3 py-1 text-sm hover:bg-paper"
+                    >
+                      Read
+                    </button>
+                  )}
                   {document.isOwner && (
                     <button
                       type="button"

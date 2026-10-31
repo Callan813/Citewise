@@ -17,7 +17,9 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Citewise API')
-    .setDescription('Ask your documents questions and get answers with page citations.')
+    .setDescription(
+      'Ask your documents questions and get answers with page citations.',
+    )
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();

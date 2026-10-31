@@ -14,10 +14,15 @@ export const configuration = () => ({
   redis: {
     host: process.env.REDIS_HOST!,
     port: Number(process.env.REDIS_PORT ?? 6379),
+    db: Number(process.env.REDIS_DB ?? 0),
   },
+  storageDir: process.env.STORAGE_DIR ?? 'uploads',
   jwt: {
     secret: process.env.JWT_SECRET!,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? '',

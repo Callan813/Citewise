@@ -15,17 +15,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiAcceptedResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
-  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiPayloadTooLargeResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
-  ApiUnprocessableEntityResponse,
   ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
 import {
@@ -49,9 +49,11 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export class DocumentsController {
   constructor(private readonly documents: DocumentsService) {}
 
+  // 202: the file is accepted but not processed yet. Clients watch its status.
   // The limit makes multer stop reading oversized uploads, and defParamCharset
   // keeps non-English filenames from being garbled.
   @Post('upload')
+  @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
@@ -66,10 +68,10 @@ export class DocumentsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @ApiCreatedResponse({ type: DocumentResponseDto })
+  @ApiAcceptedResponse({ type: DocumentResponseDto })
   @ApiPayloadTooLargeResponse({ description: 'File is larger than 10 MB' })
   @ApiUnsupportedMediaTypeResponse({ description: 'Not a PDF or text file' })
-  @ApiUnprocessableEntityResponse({ description: 'No readable text' })
+  @ApiServiceUnavailableResponse({ description: 'The job queue is down' })
   async upload(
     @CurrentUser() user: AuthUser,
     @UploadedFile() file?: Express.Multer.File,

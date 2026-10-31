@@ -19,6 +19,9 @@ export const envValidationSchema = Joi.object({
 
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().port().default(6379),
+  REDIS_DB: Joi.number().integer().min(0).default(0),
+
+  STORAGE_DIR: Joi.string().default('uploads'),
 
   // Anyone holding this secret can mint a valid token for any user.
   JWT_SECRET: Joi.string().min(32).required(),
@@ -26,6 +29,9 @@ export const envValidationSchema = Joi.object({
 
   // Optional until the app calls Gemini. Tests will use a fake provider.
   GEMINI_API_KEY: Joi.string().allow('').default(''),
+
+  // Optional. Without it the app just doesn't offer Google sign-in.
+  GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
 });
 
 export function validateEnv(env: Record<string, unknown>) {

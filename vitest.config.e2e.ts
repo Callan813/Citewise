@@ -12,6 +12,9 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_NAME: 'docintel_test',
       LOG_LEVEL: 'warn',
+      REDIS_DB: '1',
+      GOOGLE_CLIENT_ID: 'test-client-id',
+      STORAGE_DIR: 'uploads/test',
     },
     // Test files share one database, so run them one after another.
     fileParallelism: false,

@@ -15,9 +15,10 @@ export function UploadBox({ onUploaded }: Props) {
 
   async function uploadAll(files: File[]) {
     const failed: string[] = []
-    // One at a time, because the server extracts text during the request.
+    // One at a time, to keep the request simple. The server replies quickly now
+    // that extraction happens in the background.
     for (const [index, file] of files.entries()) {
-      setProgress(`Reading ${file.name} (${index + 1} of ${files.length})…`)
+      setProgress(`Uploading ${file.name} (${index + 1} of ${files.length})…`)
       if (file.size > MAX_BYTES) {
         failed.push(`${file.name}: larger than 10 MB`)
         continue

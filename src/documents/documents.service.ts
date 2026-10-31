@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { basename } from 'node:path';
 import {
   ForbiddenException,
@@ -5,6 +6,8 @@ import {
   NotFoundException,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import { IngestionQueueService } from '../ingestion/ingestion-queue.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { DocumentsRepository } from './documents.repository.js';
 import type { DocumentPage } from './entities/document-page.entity.js';
 import {
@@ -19,6 +22,8 @@ export class DocumentsService {
   constructor(
     private readonly documents: DocumentsRepository,
     private readonly extractor: TextExtractorService,
+    private readonly storage: StorageService,
+    private readonly queue: IngestionQueueService,
   ) {}
 
   async upload(
@@ -32,20 +37,30 @@ export class DocumentsService {
       );
     }
 
-    const pages = await this.extractor.extract(file.buffer, type);
-    return this.documents.createWithPages(
-      {
+    // File first, then row, then job. A failure at any step leaves nothing that
+    // a later step depends on, and the catch below removes what was created.
+    const storageKey = randomUUID();
+    await this.storage.save(storageKey, file.buffer);
+
+    let document: Document | undefined;
+    try {
+      document = await this.documents.create({
         userId,
         filename: this.cleanFilename(file.originalname),
         mimeType: type,
         sizeBytes: file.buffer.length,
-        pageCount: pages.length,
-        status: DocumentStatus.READY,
+        storageKey,
+        status: DocumentStatus.PROCESSING,
         // Uploads are always private. Only seeding creates public documents.
         visibility: DocumentVisibility.PRIVATE,
-      },
-      pages,
-    );
+      });
+      await this.queue.enqueue(document.id);
+      return document;
+    } catch (err) {
+      if (document) await this.documents.deleteOwned(document.id, userId);
+      await this.storage.delete(storageKey);
+      throw err;
+    }
   }
 
   list(userId: string, limit: number, offset: number) {
@@ -77,7 +92,14 @@ export class DocumentsService {
   }
 
   async delete(id: string, userId: string): Promise<void> {
-    if (await this.documents.deleteOwned(id, userId)) return;
+    const { deleted, storageKey } = await this.documents.deleteOwned(
+      id,
+      userId,
+    );
+    if (deleted) {
+      if (storageKey) await this.storage.delete(storageKey);
+      return;
+    }
 
     // Nothing deleted: it's either hidden from them (404) or public but owned
     // by someone else (403).

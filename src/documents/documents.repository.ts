@@ -2,26 +2,58 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DocumentPage } from './entities/document-page.entity.js';
-import { Document, DocumentVisibility } from './entities/document.entity.js';
+import {
+  Document,
+  DocumentStatus,
+  DocumentVisibility,
+} from './entities/document.entity.js';
 import type { ExtractedPage } from './text-extractor.service.js';
 
 @Injectable()
 export class DocumentsRepository {
   constructor(@InjectDataSource() private readonly db: DataSource) {}
 
-  // One transaction: a failure can't leave a document without its pages.
-  createWithPages(
-    fields: Partial<Document>,
-    pages: ExtractedPage[],
-  ): Promise<Document> {
+  create(fields: Partial<Document>): Promise<Document> {
+    const repo = this.db.getRepository(Document);
+    return repo.save(repo.create(fields));
+  }
+
+  // For the worker, which acts on behalf of no particular user. Anything
+  // serving a user's request must use the visibleTo queries below instead.
+  findById(id: string): Promise<Document | null> {
+    return this.db.getRepository(Document).findOneBy({ id });
+  }
+
+  // One transaction: pages and status change together or not at all. The row
+  // lock stops a delete from happening between the check and the insert.
+  completeIngestion(id: string, pages: ExtractedPage[]): Promise<void> {
     return this.db.transaction(async (tx) => {
-      const document = await tx.save(Document, tx.create(Document, fields));
+      const document = await tx.findOne(Document, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (document?.status !== DocumentStatus.PROCESSING) return;
+
+      await tx.delete(DocumentPage, { documentId: id });
       await tx.insert(
         DocumentPage,
-        pages.map((page) => ({ ...page, documentId: document.id })),
+        pages.map((page) => ({ ...page, documentId: id })),
       );
-      return document;
+      await tx.update(Document, id, {
+        status: DocumentStatus.READY,
+        pageCount: pages.length,
+        error: null,
+      });
     });
+  }
+
+  async markFailed(id: string, error: string): Promise<void> {
+    await this.db
+      .getRepository(Document)
+      .update(
+        { id, status: DocumentStatus.PROCESSING },
+        { status: DocumentStatus.FAILED, error },
+      );
   }
 
   // The access rule lives in one query builder, so reads can't diverge.
@@ -70,9 +102,23 @@ export class DocumentsRepository {
       .findOneBy({ documentId, pageNumber });
   }
 
+  // Returns whether a row was deleted, and its file so that can be removed too.
   // Pages are removed by ON DELETE CASCADE.
-  async deleteOwned(id: string, userId: string): Promise<boolean> {
-    const result = await this.db.getRepository(Document).delete({ id, userId });
-    return (result.affected ?? 0) > 0;
+  async deleteOwned(
+    id: string,
+    userId: string,
+  ): Promise<{ deleted: boolean; storageKey: string | null }> {
+    const result = await this.db
+      .createQueryBuilder()
+      .delete()
+      .from(Document)
+      .where('id = :id AND user_id = :userId', { id, userId })
+      .returning('storage_key')
+      .execute();
+    const rows = result.raw as { storage_key: string | null }[];
+    return {
+      deleted: rows.length > 0,
+      storageKey: rows[0]?.storage_key ?? null,
+    };
   }
 }

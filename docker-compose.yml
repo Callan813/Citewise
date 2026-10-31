@@ -22,10 +22,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # Cap memory and evict least-recently-used keys - right for a pure cache.
-    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    # Job data can't be regenerated, so Redis must never evict it (noeviction),
+    # and the append-only file lets queued jobs survive a restart.
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -34,3 +37,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:

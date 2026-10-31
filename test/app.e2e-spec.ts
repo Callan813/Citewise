@@ -18,6 +18,7 @@ describe('App (e2e)', () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
     expect(res.body.status).toBe('ok');
     expect(res.body.info.database.status).toBe('up');
+    expect(res.body.info.redis.status).toBe('up');
   });
 
   it('unknown routes return 404', async () => {

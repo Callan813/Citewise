@@ -18,6 +18,7 @@ export interface DocumentItem {
   sizeBytes: number
   pageCount: number
   status: 'processing' | 'ready' | 'failed'
+  error: string | null
   visibility: 'private' | 'public'
   isOwner: boolean
   uploadDate: string
@@ -109,6 +110,8 @@ export const api = {
     jsonPost('/auth/login', { email, password }),
   register: (email: string, password: string) =>
     jsonPost('/auth/register', { email, password }),
+  google: (idToken: string) => jsonPost('/auth/google', { idToken }),
+  authConfig: () => request<{ googleClientId: string | null }>('/auth/config'),
 
   listDocuments: (limit: number, offset: number) =>
     request<DocumentList>(`/documents?limit=${limit}&offset=${offset}`),

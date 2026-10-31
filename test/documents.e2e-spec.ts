@@ -3,6 +3,10 @@ import { PDFDocument } from 'pdf-lib';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { DataSource } from 'typeorm';
+import { DocumentsRepository } from '../src/documents/documents.repository.js';
+import { IngestionQueueService } from '../src/ingestion/ingestion-queue.service.js';
+import { IngestionProcessor } from '../src/ingestion/ingestion.processor.js';
+import { StorageService } from '../src/storage/storage.service.js';
 import { createTestApp } from './utils/create-test-app.js';
 
 async function makePdf(pages: string[]): Promise<Buffer> {
@@ -26,6 +30,20 @@ describe('Documents (e2e)', () => {
       .post('/documents/upload')
       .set(auth(token))
       .attach('file', file, name);
+
+  // Uploads return before the worker has run, so tests wait for the outcome.
+  const waitForDocument = async (token: string, id: string, ms = 10_000) => {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      const res = await request(app.getHttpServer())
+        .get(`/documents/${id}`)
+        .set(auth(token))
+        .expect(200);
+      if (res.body.status !== 'processing') return res.body;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error(`Document ${id} was still processing after ${ms}ms`);
+  };
 
   const register = async (email: string): Promise<string> => {
     const res = await request(app.getHttpServer())
@@ -55,17 +73,25 @@ describe('Documents (e2e)', () => {
 
     it('stores a PDF with real page numbers, skipping blank pages', async () => {
       const pdf = await makePdf(['First page text', '', 'Third page text']);
-      const res = await upload(priya, pdf, 'notes.pdf').expect(201);
+      const res = await upload(priya, pdf, 'notes.pdf').expect(202);
 
       expect(res.body).toMatchObject({
         filename: 'notes.pdf',
         mimeType: 'application/pdf',
-        pageCount: 2,
-        status: 'ready',
+        pageCount: 0,
+        status: 'processing',
         visibility: 'private',
         isOwner: true,
       });
       expect(res.body).not.toHaveProperty('userId');
+      expect(res.body).not.toHaveProperty('storageKey');
+
+      const done = await waitForDocument(priya, res.body.id);
+      expect(done).toMatchObject({
+        status: 'ready',
+        pageCount: 2,
+        error: null,
+      });
 
       const page = await request(app.getHttpServer())
         .get(`/documents/${res.body.id}/pages/3`)
@@ -90,9 +116,11 @@ describe('Documents (e2e)', () => {
         priya,
         Buffer.from('a'.repeat(7000)),
         'long.txt',
-      ).expect(201);
+      ).expect(202);
       expect(res.body.mimeType).toBe('text/plain');
-      expect(res.body.pageCount).toBe(3);
+
+      const done = await waitForDocument(priya, res.body.id);
+      expect(done.pageCount).toBe(3);
     });
 
     it('judges files by their bytes, not their name', async () => {
@@ -100,17 +128,78 @@ describe('Documents (e2e)', () => {
       await upload(priya, binary, 'totally-notes.pdf').expect(415);
     });
 
-    it('rejects a PDF with no text', async () => {
+    it('marks a PDF with no text as failed without retrying', async () => {
       const res = await upload(priya, await makePdf(['']), 'scan.pdf').expect(
-        422,
+        202,
       );
-      expect(res.body.message).toContain('No readable text');
+      // Well under the retry backoff, so this proves there was no retry.
+      const done = await waitForDocument(priya, res.body.id, 1500);
+      expect(done.status).toBe('failed');
+      expect(done.error).toContain('No readable text');
     });
 
-    it('rejects a corrupt PDF', async () => {
-      await upload(priya, Buffer.from('%PDF-1.7 garbage'), 'bad.pdf').expect(
-        422,
+    it('marks a corrupt PDF as failed', async () => {
+      const res = await upload(
+        priya,
+        Buffer.from('%PDF-1.7 garbage'),
+        'bad.pdf',
+      ).expect(202);
+      const done = await waitForDocument(priya, res.body.id);
+      expect(done.status).toBe('failed');
+      expect(done.error).toContain('could not be read');
+    });
+
+    it('retries unexpected errors, then gives up with a generic message', async () => {
+      // A file missing from storage is the kind of error that might be temporary.
+      const [{ id: userId }] = await app
+        .get(DataSource)
+        .query('SELECT id FROM users WHERE email = $1', ['priya@example.com']);
+      const document = await app.get(DocumentsRepository).create({
+        userId,
+        filename: 'missing.txt',
+        mimeType: 'text/plain',
+        sizeBytes: 1,
+        storageKey: 'does-not-exist',
+      });
+      await app.get(IngestionQueueService).enqueue(document.id);
+
+      const done = await waitForDocument(priya, document.id, 15_000);
+      expect(done.status).toBe('failed');
+      expect(done.error).toBe('Processing failed. Please try uploading again.');
+      expect(done.error).not.toContain('does-not-exist');
+    }, 20_000);
+
+    it('can process the same document twice without duplicating pages', async () => {
+      const res = await upload(priya, Buffer.from('hello'), 'twice.txt');
+      await waitForDocument(priya, res.body.id);
+
+      const db = app.get(DataSource);
+      await db.query(
+        `UPDATE documents SET status = 'processing' WHERE id = $1`,
+        [res.body.id],
       );
+      await app.get(IngestionProcessor).process(res.body.id);
+
+      const done = await waitForDocument(priya, res.body.id);
+      expect(done).toMatchObject({ status: 'ready', pageCount: 1 });
+    });
+
+    it('removes the stored file when the document is deleted', async () => {
+      const res = await upload(priya, Buffer.from('bye'), 'bye.txt');
+      await waitForDocument(priya, res.body.id);
+      const [{ storage_key: key }] = await app
+        .get(DataSource)
+        .query('SELECT storage_key FROM documents WHERE id = $1', [
+          res.body.id,
+        ]);
+      const storage = app.get(StorageService);
+      await expect(storage.read(key)).resolves.toBeDefined();
+
+      await request(app.getHttpServer())
+        .delete(`/documents/${res.body.id}`)
+        .set(auth(priya))
+        .expect(204);
+      await expect(storage.read(key)).rejects.toThrow();
     });
 
     it('rejects a file over the size limit', async () => {
@@ -130,7 +219,7 @@ describe('Documents (e2e)', () => {
         priya,
         Buffer.from('hello'),
         '..\\..\\evil.txt',
-      ).expect(201);
+      ).expect(202);
       expect(res.body.filename).toBe('evil.txt');
     });
   });

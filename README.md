@@ -2,12 +2,13 @@
 
 Ask your documents questions and get answers that cite the exact page. You upload PDFs and text files, and every answer shows where it came from. I'm building it in phases to learn backend engineering and deployment properly.
 
-**Status:** work in progress. Accounts, uploads, page-by-page text extraction and a small frontend work today. Asking questions doesn't work yet.
+**Status:** work in progress. Accounts, background document processing and a small frontend work today. Asking questions doesn't work yet.
 
 ## What works so far
 
-- Sign up and log in with JWT access tokens and argon2 password hashing
+- Sign up with email and password (hashed with argon2) or continue with Google, using JWT access tokens either way
 - Upload PDF and text files up to 10 MB, checked by their actual bytes rather than their extension
+- Uploads return right away while a separate worker process extracts the text, with retries and a status you can watch
 - Text stored per page, so answers can cite page numbers later
 - Private documents plus a public type that everyone can read
 - Structured logs with request IDs, one error format, a health check and Swagger docs
@@ -31,6 +32,10 @@ npm run dev
 
 Set `JWT_SECRET` in `.env` before starting. `.env.example` has a command that generates one.
 
+`npm run dev` starts the API, the worker and the frontend together.
+
+Google sign-in is optional. To turn it on, create an OAuth client ID in Google Cloud, add `http://localhost` and `http://localhost:5173` as authorized JavaScript origins, and set `GOOGLE_CLIENT_ID` in `.env`.
+
 - App: http://localhost:5173
 - API docs: http://localhost:4000/docs
 - Health check: http://localhost:4000/health
@@ -46,7 +51,6 @@ npm run test:e2e
 
 ## What's next
 
-- Background processing for uploads with a job queue
 - Embeddings and hybrid search
 - Asking questions, with cited and streamed answers
 - Caching, rate limits and usage quotas
