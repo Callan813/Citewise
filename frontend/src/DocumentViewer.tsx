@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { api, ApiError } from './api'
+import { useEffect, useRef, useState } from 'react';
+import { api, ApiError } from './api';
 
 interface Props {
-  document: { id: string; filename: string }
-  initialPage?: number
-  highlight?: string
-  onClose: () => void
+  document: { id: string; filename: string };
+  initialPage?: number;
+  highlight?: string;
+  onClose: () => void;
 }
 
 export function DocumentViewer({
@@ -14,66 +14,74 @@ export function DocumentViewer({
   highlight,
   onClose,
 }: Props) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const marked = useRef<HTMLElement>(null)
-  const [pageNumbers, setPageNumbers] = useState<number[]>([])
-  const [index, setIndex] = useState(0)
-  const [content, setContent] = useState<string | null>(null)
-  const [error, setError] = useState('')
+  const dialog = useRef<HTMLDialogElement>(null);
+  const marked = useRef<HTMLElement>(null);
+  const [pageNumbers, setPageNumbers] = useState<number[]>([]);
+  const [index, setIndex] = useState(0);
+  const [content, setContent] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const pageNumber = pageNumbers[index]
-
-  useEffect(() => {
-    dialog.current?.showModal()
-  }, [])
+  const pageNumber = pageNumbers[index];
 
   useEffect(() => {
-    let current = true
+    dialog.current?.showModal();
+  }, []);
+
+  useEffect(() => {
+    let current = true;
     api
       .pageNumbers(document.id)
       .then((res) => {
-        if (!current) return
-        setPageNumbers(res.pageNumbers)
-        const start = res.pageNumbers.indexOf(initialPage ?? -1)
-        if (start !== -1) setIndex(start)
+        if (!current) return;
+        setPageNumbers(res.pageNumbers);
+        const start = res.pageNumbers.indexOf(initialPage ?? -1);
+        setIndex(start !== -1 ? start : 0);
+        setError(
+          res.pageNumbers.length ? '' : 'This document has no readable pages.',
+        );
       })
       .catch((err: unknown) => {
         if (current) {
-          setError(err instanceof ApiError ? err.message : 'Could not load pages')
+          setError(
+            err instanceof ApiError ? err.message : 'Could not load pages',
+          );
         }
-      })
+      });
     return () => {
-      current = false
-    }
-  }, [document.id, initialPage])
+      current = false;
+    };
+  }, [document.id, initialPage]);
 
   useEffect(() => {
-    if (pageNumber === undefined) return
+    if (pageNumber === undefined) return;
     // Ignores a slow response that arrives after the user has moved on.
-    let current = true
-    setContent(null)
+    let current = true;
+    setContent(null);
+    setError('');
     api
       .page(document.id, pageNumber)
       .then((page) => current && setContent(page.content))
       .catch((err: unknown) => {
         if (current) {
-          setError(err instanceof ApiError ? err.message : 'Could not load page')
+          setError(
+            err instanceof ApiError ? err.message : 'Could not load page',
+          );
         }
-      })
+      });
     return () => {
-      current = false
-    }
-  }, [document.id, pageNumber])
+      current = false;
+    };
+  }, [document.id, pageNumber]);
 
   // The cited passage is only marked on the page it came from.
   const matchAt =
     content !== null && highlight && pageNumber === initialPage
       ? content.indexOf(highlight)
-      : -1
+      : -1;
 
   useEffect(() => {
-    marked.current?.scrollIntoView({ block: 'center' })
-  }, [matchAt])
+    marked.current?.scrollIntoView({ block: 'center' });
+  }, [matchAt]);
 
   return (
     <dialog
@@ -139,5 +147,5 @@ export function DocumentViewer({
         </footer>
       </div>
     </dialog>
-  )
+  );
 }

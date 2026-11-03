@@ -104,6 +104,14 @@ npm run seed            # optional: adds the public engineering notes
 
 Google sign-in is optional. Create an OAuth client ID in Google Cloud with `http://localhost` and `http://localhost:5173` as JavaScript origins, then set `GOOGLE_CLIENT_ID`.
 
+On Windows PowerShell, use `npm.cmd` if execution policy blocks `npm.ps1`.
+After changing `.env`, stop the running app and run `npm.cmd run dev` again.
+The landing page is shown when signed out; sign in to open the document workspace.
+For a configured Google client, **Continue with Google** works for both new and existing accounts.
+Use a Web application OAuth client and add the full origin, including the scheme and port.
+For the planned live site, the origin is `https://citewise.callangonsalves.tech`.
+Only the client ID is needed; this flow does not use a client secret.
+
 Documents uploaded before search existed can be indexed with `npm run reindex`.
 
 ## Tests and evaluation

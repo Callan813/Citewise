@@ -1,54 +1,59 @@
-import { type DragEvent, useRef, useState } from 'react'
-import { api, ApiError } from './api'
+import { type DragEvent, useRef, useState } from 'react';
+import { api, ApiError } from './api';
 
-const MAX_BYTES = 10 * 1024 * 1024
+const MAX_BYTES = 10 * 1024 * 1024;
 
 interface Props {
-  onUploaded: () => void
+  onUploaded: () => void;
 }
 
 export function UploadBox({ onUploaded }: Props) {
-  const input = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [progress, setProgress] = useState('')
-  const [errors, setErrors] = useState<string[]>([])
+  const input = useRef<HTMLInputElement>(null);
+  const uploading = useRef(false);
+  const [dragging, setDragging] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
 
   async function uploadAll(files: File[]) {
-    const failed: string[] = []
+    if (uploading.current || files.length === 0) return;
+    uploading.current = true;
+    setErrors([]);
+    const failed: string[] = [];
     // One at a time, to keep the request simple. The server replies quickly now
     // that extraction happens in the background.
     for (const [index, file] of files.entries()) {
-      setProgress(`Uploading ${file.name} (${index + 1} of ${files.length})…`)
+      setProgress(`Uploading ${file.name} (${index + 1} of ${files.length})…`);
       if (file.size > MAX_BYTES) {
-        failed.push(`${file.name}: larger than 10 MB`)
-        continue
+        failed.push(`${file.name}: larger than 10 MB`);
+        continue;
       }
       try {
-        await api.uploadDocument(file)
-        onUploaded()
+        await api.uploadDocument(file);
+        onUploaded();
       } catch (err) {
-        const reason = err instanceof ApiError ? err.message : 'Upload failed'
-        failed.push(`${file.name}: ${reason}`)
+        const reason = err instanceof ApiError ? err.message : 'Upload failed';
+        failed.push(`${file.name}: ${reason}`);
       }
     }
-    setProgress('')
-    setErrors(failed)
+    setProgress('');
+    setErrors(failed);
+    uploading.current = false;
   }
 
   function onDrop(event: DragEvent) {
-    event.preventDefault()
-    setDragging(false)
-    if (!progress) void uploadAll([...event.dataTransfer.files])
+    event.preventDefault();
+    setDragging(false);
+    if (!progress) void uploadAll([...event.dataTransfer.files]);
   }
 
-  const busy = Boolean(progress)
+  const busy = Boolean(progress);
 
   return (
     <section>
       <div
         onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
+          e.preventDefault();
+          setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
@@ -82,9 +87,9 @@ export function UploadBox({ onUploaded }: Props) {
           className="hidden"
           aria-label="Choose files to upload"
           onChange={(e) => {
-            const files = [...(e.target.files ?? [])]
-            e.target.value = '' // lets the same file be chosen again
-            if (files.length > 0) void uploadAll(files)
+            const files = [...(e.target.files ?? [])];
+            e.target.value = ''; // lets the same file be chosen again
+            if (files.length > 0) void uploadAll(files);
           }}
         />
       </div>
@@ -102,5 +107,5 @@ export function UploadBox({ onUploaded }: Props) {
         </ul>
       )}
     </section>
-  )
+  );
 }
