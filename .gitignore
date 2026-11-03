@@ -11,3 +11,4 @@ backups/
 *.tsbuildinfo
 .DS_Store
 .tmp-*/
+docs/Citewise-Project-Guide.pdf
