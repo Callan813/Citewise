@@ -100,11 +100,6 @@ DATABASE_NAME=docintel_eval npm run eval -- --answers  # also calls the model
 
 The evaluation needs a Gemini key and a migrated `docintel_eval` database.
 
-## More
-
-- [API examples](docs/API.md)
-- [Deploying to a server](docs/DEPLOYMENT.md)
-
 ## Stack
 
 NestJS, TypeScript, PostgreSQL, pgvector, Redis, BullMQ, TypeORM, Gemini, React, Vite, Tailwind, Docker, Caddy, Prometheus, Grafana and GitHub Actions.
