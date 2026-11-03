@@ -1,116 +1,98 @@
-import { type FormEvent, useEffect, useState } from 'react'
-import { api, ApiError, type AuthResponse } from './api'
-import { Brand } from './Brand'
-import { GoogleButton } from './GoogleButton'
+import { type FormEvent, useEffect, useState } from 'react';
+import { api, ApiError, type AuthResponse } from './api';
+import { Brand } from './Brand';
+import { OrbitArt } from './LandingScreen';
+import { GoogleButton } from './GoogleButton';
 
 interface Props {
-  onAuthenticated: (auth: AuthResponse) => void
+  initialMode?: 'login' | 'register';
+  onBack: () => void;
+  onAuthenticated: (auth: AuthResponse) => void;
 }
 
 const inputClass =
-  'rounded-lg border border-line bg-surface px-3.5 py-2.5 text-base font-normal transition-colors focus:border-accent'
+  'rounded-lg border border-line bg-surface px-3.5 py-2.5 text-base font-normal transition-colors focus:border-accent';
 
-export function AuthScreen({ onAuthenticated }: Props) {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [googleClientId, setGoogleClientId] = useState<string | null>(null)
+export function AuthScreen({
+  onAuthenticated,
+  initialMode = 'login',
+  onBack,
+}: Props) {
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
 
-  const isLogin = mode === 'login'
+  const isLogin = mode === 'login';
 
   // The button only appears when the backend has Google sign-in set up.
   useEffect(() => {
     api
       .authConfig()
       .then((config) => setGoogleClientId(config.googleClientId))
-      .catch(() => setGoogleClientId(null))
-  }, [])
+      .catch(() => setGoogleClientId(null));
+  }, []);
 
   async function signInWithGoogle(idToken: string) {
-    setBusy(true)
-    setError('')
+    setBusy(true);
+    setError('');
     try {
-      onAuthenticated(await api.google(idToken))
+      onAuthenticated(await api.google(idToken));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? err.message : 'Something went wrong');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function submit(event: FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    setError('')
+    event.preventDefault();
+    setBusy(true);
+    setError('');
     try {
-      const call = isLogin ? api.login : api.register
-      onAuthenticated(await call(email, password))
+      const call = isLogin ? api.login : api.register;
+      onAuthenticated(await call(email, password));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? err.message : 'Something went wrong');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.15fr_1fr]">
-      <aside className="hidden flex-col justify-between border-r border-line px-14 py-12 lg:flex">
-        <Brand large />
-
-        <div className="max-w-xl">
-          <h1 className="font-serif text-6xl leading-[1.05] font-normal tracking-tight">
-            Ask your documents.
+    <div className="auth-page">
+      <header className="site-header page-width">
+        <button onClick={onBack} aria-label="Citewise home">
+          <Brand large />
+        </button>
+        <button className="button outline" onClick={onBack}>
+          Back to home ↗
+        </button>
+      </header>
+      <div className="auth-layout page-width">
+        <aside className="auth-story">
+          <p className="eyebrow">YOUR DOCUMENT LIBRARY</p>
+          <h1>
+            A little curiosity.
             <br />
-            <em className="text-accent">Check every answer.</em>
+            <span>A lot of clarity.</span>
           </h1>
-          <p className="mt-5 max-w-md text-lg text-muted">
-            Upload your notes and papers, ask in plain language, and see the
-            exact page behind each answer.
+          <p>
+            All your notes. Better questions. Answers you can trace back to the
+            page.
           </p>
-
-          <figure className="mt-10 rounded-xl border border-line bg-surface p-6 shadow-[0_18px_40px_-28px_rgb(60_40_10/0.5)]">
-            <figcaption className="text-xs font-semibold tracking-widest text-muted uppercase">
-              Example
-            </figcaption>
-            <p className="mt-3 text-sm text-muted">
-              What separates 2NF from 3NF?
-            </p>
-            <p className="mt-2 font-serif text-xl leading-snug">
-              2NF removes partial dependencies, while 3NF also removes
-              transitive ones.<span className="citation">1</span>
-            </p>
-            <p className="mt-4 border-l-2 border-accent pl-3 text-sm text-muted">
-              <span className="font-medium text-ink">1</span> · DBMS_Notes.pdf,
-              page 14
-            </p>
-          </figure>
-        </div>
-
-        <p className="text-sm text-muted">
-          Answers come only from what you upload.
-        </p>
-      </aside>
-
-      <main className="flex items-center justify-center px-4 py-10 sm:px-8">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 lg:hidden">
-            <Brand large />
-            <p className="mt-2 text-muted">
-              Ask your documents. Check every answer.
-            </p>
-          </div>
-
-          <h2 className="font-serif text-3xl tracking-tight">
-            {isLogin ? 'Welcome back' : 'Create your account'}
-          </h2>
-          <p className="mt-1 mb-7 text-muted">
+          <OrbitArt />
+        </aside>
+        <main className="auth-card">
+          <span className="auth-badge">CITEWISE</span>
+          <h2>{isLogin ? 'Welcome back.' : 'Let’s get curious.'}</h2>
+          <p className="mt-2 mb-7 text-muted">
             {isLogin
               ? 'Sign in to your library.'
-              : 'Start your own library in a minute.'}
+              : 'Start with your notes or the shared library.'}
           </p>
-
           {googleClientId && (
             <div className="mb-6">
               <GoogleButton
@@ -166,15 +148,15 @@ export function AuthScreen({ onAuthenticated }: Props) {
               disabled={busy}
               className="mt-1 rounded-lg bg-accent px-4 py-2.5 font-semibold text-on-accent transition-colors hover:bg-accent-dark disabled:opacity-60"
             >
-              {busy ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
+              {busy ? 'Please wait...' : isLogin ? 'Sign in' : 'Create account'}
             </button>
           </form>
 
           <button
             type="button"
             onClick={() => {
-              setMode(isLogin ? 'register' : 'login')
-              setError('')
+              setMode(isLogin ? 'register' : 'login');
+              setError('');
             }}
             className="mt-5 text-sm text-muted transition-colors hover:text-ink"
           >
@@ -183,8 +165,8 @@ export function AuthScreen({ onAuthenticated }: Props) {
               {isLogin ? 'Create an account' : 'Sign in'}
             </span>
           </button>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  )
+  );
 }
