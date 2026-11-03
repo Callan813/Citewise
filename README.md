@@ -49,32 +49,6 @@ flowchart TD
     L --> C[Return citations and cache the answer]
 ```
 
-## How well it works
-
-I measure search on a fixed set of 30 questions, mostly worded differently from the notes, plus 8 the notes can't answer. `eval/results.json` has the full output.
-
-| Method | Right passage first | Right passage in top 5 | MRR |
-|---|---|---|---|
-| Keywords only | 83.3% | 96.7% | 0.894 |
-| Vectors only | 80.0% | 100% | 0.900 |
-| **Hybrid (what the app uses)** | **90.0%** | 96.7% | **0.933** |
-
-With the relevance cutoff on, all 8 off-topic questions were blocked before reaching the model, and all 30 real ones kept their passage. With the real model, all 30 answers contained the expected term and a citation, and all 8 off-topic questions were refused.
-
-Please read those as a smoke test rather than a benchmark. The corpus is only 17 chunks, and I wrote both the notes and the questions. The answer check just looks for an expected term, and hybrid search still misses one passage that vector search alone finds.
-
-The evaluation did change the code. My first version of hybrid search scored the same as vectors alone, and keyword search only found 23% of passages, because it required every word of a question to match. Fixing that let off-topic questions through on a single shared word, so keyword matches now only count alongside a relevant vector match or when every word matches.
-
-## Decisions I can explain
-
-- **pgvector instead of a vector database.** Everything stays in one transactional store, and access rules are a normal SQL filter.
-- **Access rules inside the SQL.** Filtering in code afterwards would let someone else's private text pass through the system.
-- **A strict semantic cache (0.93).** I measured that "advantages of paging" and "disadvantages of paging" score 0.88, higher than two real rewordings at 0.78. A loose threshold would confidently return the wrong answer, so I accept fewer cache hits.
-- **Cache keys include a fingerprint of the user's documents.** Answers can't leak between users, and adding or deleting a document makes old answers unreachable without any invalidation code.
-- **Two Redis instances.** The cache may evict keys when full, but queued jobs must never disappear.
-- **Quotas in Postgres, rate limits in Redis.** A rate limit that resets during an outage is fine. A daily spending limit shouldn't be.
-- **Linking Google removes the old password.** Password signups aren't email-verified, so someone could register with your address first and wait for you to link your account.
-
 ## Known limits
 
 - Scanned PDFs aren't supported, because there's no OCR.
